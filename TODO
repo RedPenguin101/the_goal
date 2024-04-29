@@ -1,0 +1,21 @@
+
+Message list cycle
+Menu:
+        adding machines
+        adding stockpiles
+        adding workers
+
+Stocastic variation in timing
+
+hover menus
+
+Second worker
+
+Handling of 'held' jobs
+Milling idle workers
+Walls and pathfinding for workers
+
+Set up room two of factory: pulling lengths, 2x cutting stations, 1x point grinding station
+
+BUG: empty stockpiles should not be shown in stockpiles
+
