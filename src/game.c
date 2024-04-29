@@ -606,7 +606,8 @@ void tick_worker(Worker *w) {
   break;
 
   case NONE: {
-
+    // randomly wander around   
+    w->location = vec_move_random(w->location);
   } break;
   }
   }

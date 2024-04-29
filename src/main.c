@@ -66,6 +66,7 @@ void draw_game_state(GameState *gs) {
 }
 
 int main(void) {
+  srand(time(0));
   GameState *gs = new_game();
 
   int in = add_stockpile(2, 2, 2, 2);
@@ -89,15 +90,15 @@ int main(void) {
   assign_machine_production_job(winder, WIND_WIRE);
   //assign_machine_production_job(puller, PULL_WIRE);
 
-#define UI 0
+#define UI 1
 
   if (UI) {
     InitWindow(SCREEN_WIDTH * 2, SCREEN_HEIGHT, "THE_GOAL");
     SetTargetFPS(5);
   }
 
-  // while (!WindowShouldClose() && !quit) {
-  while (!quit && turn < 50) {
+  while (!WindowShouldClose() && !quit) {
+    //while (!quit && turn < 50) {
     if (UI) {
       draw_game_state(gs);
     }
