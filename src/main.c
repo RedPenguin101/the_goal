@@ -1,5 +1,5 @@
 #include "game.h"
-#include <raylib.h>
+#include "raylib.h"
 #include <stdbool.h>
 
 #define MAX_X 15
@@ -9,15 +9,39 @@
 #define SCREEN_HEIGHT (MAX_Y * SQUARE_SIZE)
 #define TEXT_SIZE 15
 
+#define FRAMES_PER_ROW 16
+#define FRAMES_PER_COL 16
+#define FRAME_WORKER 1
+#define FRAME_MACHINE (13*16) + 1
+#define FRAME_STOCKPILE (11*16)
+
 long turn = 0;
 
 bool quit = false;
 
-void draw_game_state(GameState *gs) {
+Vector2 frame_to_row_col(int frame, int frames_per_row){
+    Vector2 v = {frame % frames_per_row, frame / frames_per_row};
+    return v;
+}
+
+void draw_frame_in_square(int frame, int row, int col, Texture2D *tex) {
+  int f_row = frame % FRAMES_PER_ROW;
+  int f_col = frame / FRAMES_PER_COL;
+  
+  int frame_width = tex->width / FRAMES_PER_ROW;
+  int frame_height = tex->height / FRAMES_PER_COL;
+  Rectangle dest_rec = { row*SQUARE_SIZE, col*SQUARE_SIZE, 
+                         SQUARE_SIZE, SQUARE_SIZE };
+  Rectangle source_rec = { (float)(frame_width * f_row), (float)(frame_height * f_col), 
+                             (float)frame_width, (float)frame_height };
+  DrawTexturePro(*tex, source_rec, dest_rec, (Vector2) {0,0}, 0, BLUE);
+}
+
+void draw_game_state(GameState *gs, const Texture2D *tex) {
   BeginDrawing();
   ClearBackground(RAYWHITE);
 
-  for (int i = 0; i <= MAX_X; i++) {
+/*   for (int i = 0; i <= MAX_X; i++) {
     DrawLineV((Vector2){SQUARE_SIZE * i, 0},
               (Vector2){SQUARE_SIZE * i, SCREEN_HEIGHT}, LIGHTGRAY);
   }
@@ -25,20 +49,28 @@ void draw_game_state(GameState *gs) {
   for (int i = 0; i <= MAX_Y; i++) {
     DrawLineV((Vector2){0, SQUARE_SIZE * i},
               (Vector2){SCREEN_WIDTH, SQUARE_SIZE * i}, LIGHTGRAY);
-  }
+  } */
 
   for (int i = 0; i < gs->c_machines; i++) {
     Machine w = gs->machines[i];
-    DrawRectangle(SQUARE_SIZE * w.location.x, SQUARE_SIZE * w.location.y,
-                  SQUARE_SIZE * w.size.x, SQUARE_SIZE * w.size.y, RED);
+    for (int i=0;i<w.size.x;i++) {
+      for (int j=0;j<w.size.y;j++) {
+        draw_frame_in_square(FRAME_MACHINE, w.location.x + i, w.location.y + j, tex);
+      }
+    }
   }
 
   for (int i = 0; i < gs->c_stockpile; i++) {
     Stockpile w = gs->stockpiles[i];
     int start_x = w.location.x;
     int start_y = w.location.y;
-    DrawRectangle(SQUARE_SIZE * start_x, SQUARE_SIZE * start_y,
-                  SQUARE_SIZE * w.size.x, SQUARE_SIZE * w.size.y, GREEN);
+
+    for (int i=0;i<w.size.x;i++) {
+      for (int j=0;j<w.size.y;j++) {
+        draw_frame_in_square(FRAME_STOCKPILE, w.location.x + i, w.location.y + j, tex);
+      }
+    }
+
     for (int j = 0; j < w.things_in_stockpile; j++) {
       DrawCircleV(
           (Vector2){SQUARE_SIZE * (start_x + j) + ((float)SQUARE_SIZE / 2),
@@ -53,14 +85,13 @@ void draw_game_state(GameState *gs) {
 
   for (int i = 0; i < gs->c_workers; i++) {
     Worker w = gs->workers[i];
-    DrawRectangle(SQUARE_SIZE * w.location.x, SQUARE_SIZE * w.location.y,
-                  SQUARE_SIZE, SQUARE_SIZE, BLUE);
+    draw_frame_in_square(FRAME_WORKER, w.location.x, w.location.y, tex);
   }
 
-  for (int i = 0; i < MESSAGE_BUFFER_SIZE; i++) {
+/*   for (int i = 0; i < MESSAGE_BUFFER_SIZE; i++) {
     DrawText(gs->message_buffer[i], MAX_X * SQUARE_SIZE + 20,
              20 + (i * TEXT_SIZE), TEXT_SIZE, BLACK);
-  }
+  } */
 
   EndDrawing();
 }
@@ -90,24 +121,18 @@ int main(void) {
   assign_machine_production_job(winder, WIND_WIRE);
   //assign_machine_production_job(puller, PULL_WIRE);
 
-#define UI 1
-
-  if (UI) {
-    InitWindow(SCREEN_WIDTH * 2, SCREEN_HEIGHT, "THE_GOAL");
-    SetTargetFPS(5);
-  }
+  InitWindow(SCREEN_WIDTH * 2, SCREEN_HEIGHT, "THE_GOAL");
+  Texture2D ascii = LoadTexture("assets/Anno_16x16.png");
+  SetTargetFPS(5);
 
   while (!WindowShouldClose() && !quit) {
-    //while (!quit && turn < 50) {
-    if (UI) {
-      draw_game_state(gs);
-    }
+    draw_game_state(gs, &ascii);
     tick_game();
     turn++;
   }
 
-  if (UI)
-    CloseWindow();
+  CloseWindow();
+  UnloadTexture(ascii);
 
   return 0;
 }
