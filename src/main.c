@@ -12,50 +12,42 @@
 #define FRAMES_PER_ROW 16
 #define FRAMES_PER_COL 16
 #define FRAME_WORKER 1
-#define FRAME_MACHINE (13*16) + 1
-#define FRAME_STOCKPILE (11*16)
+#define FRAME_MACHINE (13 * 16) + 1
+#define FRAME_STOCKPILE (11 * 16)
 
 long turn = 0;
 
 bool quit = false;
 
-Vector2 frame_to_row_col(int frame, int frames_per_row){
-    Vector2 v = {frame % frames_per_row, frame / frames_per_row};
-    return v;
+Vector2 frame_to_row_col(int frame, int frames_per_row) {
+  Vector2 v = {frame % frames_per_row, frame / frames_per_row};
+  return v;
 }
 
 void draw_frame_in_square(int frame, int row, int col, Texture2D *tex) {
   int f_row = frame % FRAMES_PER_ROW;
   int f_col = frame / FRAMES_PER_COL;
-  
+
   int frame_width = tex->width / FRAMES_PER_ROW;
   int frame_height = tex->height / FRAMES_PER_COL;
-  Rectangle dest_rec = { row*SQUARE_SIZE, col*SQUARE_SIZE, 
-                         SQUARE_SIZE, SQUARE_SIZE };
-  Rectangle source_rec = { (float)(frame_width * f_row), (float)(frame_height * f_col), 
-                             (float)frame_width, (float)frame_height };
-  DrawTexturePro(*tex, source_rec, dest_rec, (Vector2) {0,0}, 0, BLUE);
+  Rectangle dest_rec = {row * SQUARE_SIZE, col * SQUARE_SIZE, SQUARE_SIZE,
+                        SQUARE_SIZE};
+  Rectangle source_rec = {(float)(frame_width * f_row),
+                          (float)(frame_height * f_col), (float)frame_width,
+                          (float)frame_height};
+  DrawTexturePro(*tex, source_rec, dest_rec, (Vector2){0, 0}, 0, BLUE);
 }
 
 void draw_game_state(GameState *gs, const Texture2D *tex) {
   BeginDrawing();
   ClearBackground(RAYWHITE);
 
-/*   for (int i = 0; i <= MAX_X; i++) {
-    DrawLineV((Vector2){SQUARE_SIZE * i, 0},
-              (Vector2){SQUARE_SIZE * i, SCREEN_HEIGHT}, LIGHTGRAY);
-  }
-
-  for (int i = 0; i <= MAX_Y; i++) {
-    DrawLineV((Vector2){0, SQUARE_SIZE * i},
-              (Vector2){SCREEN_WIDTH, SQUARE_SIZE * i}, LIGHTGRAY);
-  } */
-
   for (int i = 0; i < gs->c_machines; i++) {
     Machine w = gs->machines[i];
-    for (int i=0;i<w.size.x;i++) {
-      for (int j=0;j<w.size.y;j++) {
-        draw_frame_in_square(FRAME_MACHINE, w.location.x + i, w.location.y + j, tex);
+    for (int i = 0; i < w.size.x; i++) {
+      for (int j = 0; j < w.size.y; j++) {
+        draw_frame_in_square(FRAME_MACHINE, w.location.x + i, w.location.y + j,
+                             tex);
       }
     }
   }
@@ -65,9 +57,10 @@ void draw_game_state(GameState *gs, const Texture2D *tex) {
     int start_x = w.location.x;
     int start_y = w.location.y;
 
-    for (int i=0;i<w.size.x;i++) {
-      for (int j=0;j<w.size.y;j++) {
-        draw_frame_in_square(FRAME_STOCKPILE, w.location.x + i, w.location.y + j, tex);
+    for (int i = 0; i < w.size.x; i++) {
+      for (int j = 0; j < w.size.y; j++) {
+        draw_frame_in_square(FRAME_STOCKPILE, w.location.x + i,
+                             w.location.y + j, tex);
       }
     }
 
@@ -87,11 +80,6 @@ void draw_game_state(GameState *gs, const Texture2D *tex) {
     Worker w = gs->workers[i];
     draw_frame_in_square(FRAME_WORKER, w.location.x, w.location.y, tex);
   }
-
-/*   for (int i = 0; i < MESSAGE_BUFFER_SIZE; i++) {
-    DrawText(gs->message_buffer[i], MAX_X * SQUARE_SIZE + 20,
-             20 + (i * TEXT_SIZE), TEXT_SIZE, BLACK);
-  } */
 
   EndDrawing();
 }
@@ -119,7 +107,7 @@ int main(void) {
 
   add_worker();
   assign_machine_production_job(winder, WIND_WIRE);
-  //assign_machine_production_job(puller, PULL_WIRE);
+  // assign_machine_production_job(puller, PULL_WIRE);
 
   InitWindow(SCREEN_WIDTH * 2, SCREEN_HEIGHT, "THE_GOAL");
   Texture2D ascii = LoadTexture("assets/Anno_16x16.png");
