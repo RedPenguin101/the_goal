@@ -13,9 +13,11 @@
 #define FRAMES_PER_COL 16
 #define FRAME_WORKER 1
 #define FRAME_MACHINE (13 * 16) + 1
-#define FRAME_STOCKPILE (11 * 16)
+#define FRAME_STOCKPILE (11 * 16) + 0
+#define FRAME_CURSOR (5 * 16) + 8
 
-long turn = 0;
+#define FPS 60
+#define TPS 5
 
 bool quit = false;
 
@@ -81,10 +83,33 @@ void draw_game_state(GameState *gs, const Texture2D *tex) {
     draw_frame_in_square(FRAME_WORKER, w.location.x, w.location.y, tex);
   }
 
+  DrawLine(SQUARE_SIZE * (MAX_X + 1), 0, SQUARE_SIZE * (MAX_X + 1),
+           SCREEN_HEIGHT, GRAY);
+
+  draw_frame_in_square(FRAME_CURSOR, gs->cursor.x, gs->cursor.y, tex);
+
   EndDrawing();
 }
 
+void handle_input(GameState *gs) {
+  if (IsKeyPressed(KEY_RIGHT) && (gs->cursor.x < MAX_X)) {
+    gs->cursor.x++;
+  }
+  if (IsKeyPressed(KEY_LEFT) && (gs->cursor.x > 0)) {
+    gs->cursor.x--;
+  }
+  if (IsKeyPressed(KEY_UP) && (gs->cursor.y > 0)) {
+    gs->cursor.y--;
+  }
+  if (IsKeyPressed(KEY_DOWN) && (gs->cursor.y < MAX_Y)) {
+    gs->cursor.y++;
+  }
+}
+
 int main(void) {
+  int frame = 0;
+  long turn = 0;
+
   srand(time(0));
   GameState *gs = new_game();
 
@@ -106,17 +131,22 @@ int main(void) {
   add_input_stockpile_to_machine(puller, in);
 
   add_worker();
+  add_worker();
   assign_machine_production_job(winder, WIND_WIRE);
   // assign_machine_production_job(puller, PULL_WIRE);
 
   InitWindow(SCREEN_WIDTH * 2, SCREEN_HEIGHT, "THE_GOAL");
-  Texture2D ascii = LoadTexture("assets/Anno_16x16.png");
-  SetTargetFPS(5);
+  Texture2D ascii = LoadTexture("assets/16x16-RogueYun-AgmEdit.png");
+  SetTargetFPS(FPS);
 
   while (!WindowShouldClose() && !quit) {
+    handle_input(gs);
     draw_game_state(gs, &ascii);
-    tick_game();
-    turn++;
+    if (frame % (FPS / TPS) == 0) {
+      tick_game();
+      turn++;
+    }
+    frame++;
   }
 
   CloseWindow();

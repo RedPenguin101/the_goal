@@ -135,7 +135,7 @@ const Recipe wind_wire = {.name = WIND_WIRE,
                           .o_count = 1,
                           .outputs = {SPINDLED_WIRE_COIL},
                           .outputs_count = {1},
-                          .time = 3};
+                          .time = 10};
 
 const Recipe pull_wire = {.name = PULL_WIRE,
                           .i_count = 1,
@@ -144,7 +144,7 @@ const Recipe pull_wire = {.name = PULL_WIRE,
                           .o_count = 1,
                           .outputs = {WIRE},
                           .outputs_count = {100},
-                          .time = 3};
+                          .time = 10};
 
 Recipe get_recipe_from_name(RecipeName rn) {
   switch (rn) {
@@ -611,7 +611,7 @@ void tick_worker(Worker *w) {
 
   case NONE: {
     // randomly wander around   
-    w->location = vec_move_random(w->location);
+    w->location = vec_move_random(w->location, 20);
   } break;
   }
   }

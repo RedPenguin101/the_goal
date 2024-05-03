@@ -4,9 +4,7 @@
 /*   printf("[%d, %d]", a.x, a.y); */
 /* } */
 
-bool vec_equal(Vector a, Vector b) {
-  return ((a.x == b.x) && (a.y == b.y));
-}
+bool vec_equal(Vector a, Vector b) { return ((a.x == b.x) && (a.y == b.y)); }
 
 Vector vec_move(Vector v, Direction d) {
   switch (d) {
@@ -45,9 +43,10 @@ int rand_between(int lower, int upper) {
   return (rand() % (upper - lower + 1)) + lower;
 }
 
-Vector vec_move_random(Vector current) {
-  int dir = rand_between(0, 4);
-  if (dir == 4)
+Vector vec_move_random(Vector current, int die_size) {
+  int roll = rand_between(0, die_size);
+  if (roll < 3)
+    return vec_move(current, roll);
+  else
     return current;
-  return vec_move(current, dir);
 }

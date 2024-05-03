@@ -90,6 +90,7 @@ typedef struct GameState {
   long turn;
   char message_buffer[MESSAGE_BUFFER_SIZE][MESSAGE_MAX_SIZE];
   int message_head;
+  Vector cursor;
 } GameState;
 
 GameState *new_game(void);
