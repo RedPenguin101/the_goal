@@ -24,7 +24,7 @@ Vector2 frame_to_row_col(int frame, int frames_per_row) {
   return v;
 }
 
-void draw_frame_in_square(int frame, int row, int col, Texture2D *tex) {
+void draw_frame_in_square(int frame, int row, int col, const Texture2D *tex) {
   int f_row = frame % FRAMES_PER_ROW;
   int f_col = frame / FRAMES_PER_COL;
 

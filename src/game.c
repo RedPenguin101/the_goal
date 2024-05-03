@@ -155,6 +155,9 @@ Recipe get_recipe_from_name(RecipeName rn) {
   case CUT_WIRE:
     printf("CUT_WIRE recipe not implemented\n");
     exit(1);
+  default:
+    printf("Unknown recipe %d\n", rn);
+    exit(1);
   }
 }
 
@@ -511,7 +514,8 @@ void worker_drop_at_stockpile(Worker *w, Stockpile *s) {
          w->carrying_count, material_str(w->carrying));
 
   s->contents[s->things_in_stockpile] = w->carrying;
-  s->contents[s->things_in_stockpile] = w->carrying_count;
+  s->content_count[s->things_in_stockpile] = w->carrying_count;
+  s->things_in_stockpile ++;
   w->carrying_count = 0;
 }
 

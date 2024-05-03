@@ -18,6 +18,9 @@ Vector vec_move(Vector v, Direction d) {
     return (Vector){v.x - 1, v.y};
   case RIGHT:
     return (Vector){v.x + 1, v.y};
+  default:
+    printf("Unknown direction %d\n", d);
+    exit(1);
   }
 }
 
