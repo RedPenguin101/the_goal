@@ -46,8 +46,8 @@ int rand_between(int lower, int upper) {
 }
 
 Vector vec_move_random(Vector current) {
-  int dir = rand_between(0, 5);
-  if (dir == 5)
+  int dir = rand_between(0, 4);
+  if (dir == 4)
     return current;
   return vec_move(current, dir);
 }
