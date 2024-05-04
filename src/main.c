@@ -110,10 +110,8 @@ void draw_game_state(struct DrawState *ds) {
     Worker *w = get_worker_by_id(o.id);
     sprintf(text_buffer, "Worker with ID %d", w->id);
     DrawTextEx(*font, text_buffer,
-               (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, font_size}, 
-               font_size, 
-               4,
-               BLUE);
+               (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, font_size},
+               font_size, 4, BLUE);
     break;
   }
   case O_MACHINE: {
@@ -121,10 +119,8 @@ void draw_game_state(struct DrawState *ds) {
     Machine *m = get_machine_by_id(o.id);
     sprintf(text_buffer, "%s machine %d", machine_str(m->mtype), m->id);
     DrawTextEx(*font, text_buffer,
-               (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, font_size}, 
-               font_size, 
-               4,
-               BLUE);
+               (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, font_size},
+               font_size, 4, BLUE);
     break;
   }
   case O_STOCKPILE: {
@@ -132,27 +128,22 @@ void draw_game_state(struct DrawState *ds) {
     Stockpile *s = get_stockpile_by_id(o.id);
     sprintf(text_buffer, "Stockpile with ID %d", s->id);
     DrawTextEx(*font, text_buffer,
-               (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, font_size}, 
-               font_size, 
-               4,
-               BLUE);
+               (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, font_size},
+               font_size, 4, BLUE);
 
-    DrawTextEx(*font, "Contains",
-               (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, (font_size * 2)}, 
-               font_size, 
-               4,
-               BLUE);
+    DrawTextEx(
+        *font, "Contains",
+        (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, (font_size * 2)},
+        font_size, 4, BLUE);
     int y_offset = 0;
     for (int i = 0; i < s->things_in_stockpile; i++) {
       if (s->content_count[i] > 0) {
         sprintf(text_buffer, "\t%s: %d", material_str(s->contents[i]),
                 s->content_count[i]);
         DrawTextEx(*font, text_buffer,
-               (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, 
-               (font_size * (3 + y_offset))}, 
-               font_size, 
-               4,
-               BLUE);
+                   (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
+                             (font_size * (3 + y_offset))},
+                   font_size, 4, BLUE);
         y_offset++;
       }
     }
