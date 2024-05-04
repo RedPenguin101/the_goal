@@ -26,6 +26,7 @@ struct DrawState {
   GameState *gs;
   char *context_menu_text;
   Texture2D *tilemap;
+  Font *font;
 } draw_state;
 
 Vector2 frame_to_row_col(int frame, int frames_per_row) {
@@ -50,6 +51,8 @@ void draw_frame_in_square(int frame, int row, int col, const Texture2D *tex) {
 void draw_game_state(struct DrawState *ds) {
   GameState *gs = ds->gs;
   Texture2D *tex = ds->tilemap;
+  Font *font = ds->font;
+  int font_size = font->baseSize * 2.0;
   char *text_buffer = ds->context_menu_text;
   BeginDrawing();
   ClearBackground(RAYWHITE);
@@ -106,30 +109,50 @@ void draw_game_state(struct DrawState *ds) {
     // printf("DEBUG: Worker under cursor\n");
     Worker *w = get_worker_by_id(o.id);
     sprintf(text_buffer, "Worker with ID %d", w->id);
-    DrawText(text_buffer, SQUARE_SIZE * (MAX_X + 1) + 20, 20, 20, BLACK);
+    DrawTextEx(*font, text_buffer,
+               (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, font_size}, 
+               font_size, 
+               4,
+               BLUE);
     break;
   }
   case O_MACHINE: {
     // printf("DEBUG: Machine under cursor\n");
     Machine *m = get_machine_by_id(o.id);
     sprintf(text_buffer, "%s machine %d", machine_str(m->mtype), m->id);
-    DrawText(text_buffer, SQUARE_SIZE * (MAX_X + 1) + 20, 20, 20, BLACK);
+    DrawTextEx(*font, text_buffer,
+               (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, font_size}, 
+               font_size, 
+               4,
+               BLUE);
     break;
   }
   case O_STOCKPILE: {
     // printf("DEBUG: Stockpile under cursor\n");
     Stockpile *s = get_stockpile_by_id(o.id);
     sprintf(text_buffer, "Stockpile with ID %d", s->id);
-    DrawText(text_buffer, SQUARE_SIZE * (MAX_X + 1) + 20, 20, 20, BLACK);
+    DrawTextEx(*font, text_buffer,
+               (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, font_size}, 
+               font_size, 
+               4,
+               BLUE);
 
-    DrawText("Contains:", SQUARE_SIZE * (MAX_X + 1) + 20, 40, 20, BLACK);
+    DrawTextEx(*font, "Contains",
+               (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, (font_size * 2)}, 
+               font_size, 
+               4,
+               BLUE);
     int y_offset = 0;
     for (int i = 0; i < s->things_in_stockpile; i++) {
       if (s->content_count[i] > 0) {
         sprintf(text_buffer, "\t%s: %d", material_str(s->contents[i]),
                 s->content_count[i]);
-        DrawText(text_buffer, SQUARE_SIZE * (MAX_X + 1) + 20,
-                 60 + (y_offset * 20), 20, BLACK);
+        DrawTextEx(*font, text_buffer,
+               (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, 
+               (font_size * (3 + y_offset))}, 
+               font_size, 
+               4,
+               BLUE);
         y_offset++;
       }
     }
@@ -204,7 +227,9 @@ int main(void) {
   // assign_machine_production_job(puller, PULL_WIRE);
 
   InitWindow(SCREEN_WIDTH * 2, SCREEN_HEIGHT, "THE_GOAL");
+  Font font = LoadFont("assets/romulus.png");
   Texture2D ascii = LoadTexture("assets/16x16-RogueYun-AgmEdit.png");
+  ds.font = &font;
   ds.tilemap = &ascii;
   SetTargetFPS(FPS);
 
@@ -218,8 +243,10 @@ int main(void) {
     frame++;
   }
 
-  CloseWindow();
   UnloadTexture(ascii);
+  UnloadFont(font);
+  CloseWindow();
+
   free(context_menu_text);
 
   return 0;

@@ -17,3 +17,6 @@ Walls and pathfinding for workers
 Set up room two of factory: pulling lengths, 2x cutting stations, 1x point grinding station
 BUG: Workers always revert to their previous position after wandering
 selection and target menu
+Display what a machine is working on.
+Limit the recipes that a machine can work on.
+Add an order to a workshop
