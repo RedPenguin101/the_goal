@@ -6,6 +6,18 @@
 #define MESSAGE_BUFFER_SIZE 10
 #define MESSAGE_MAX_SIZE 256
 
+typedef enum ObjectType {
+  O_NOTHING,
+  O_MACHINE,
+  O_WORKER,
+  O_STOCKPILE
+} ObjectType;
+
+typedef struct ObjectReference {
+  ObjectType object_type;
+  int id;
+} ObjectReference;
+
 enum Job { NONE, MAN_MACHINE, EMPTY_OUTPUT_BUFFER, FILL_INPUT_BUFFER };
 
 typedef enum RecipeName {
@@ -97,12 +109,17 @@ GameState *new_game(void);
 
 int add_stockpile(int x, int y, int w, int h);
 void add_material_to_stockpile(int sid, ProductionMaterial p, int count);
+Stockpile *get_stockpile_by_id(int id);
 
 int add_machine(enum MachineType type, char *name, int x, int y);
 void add_output_stockpile_to_machine(int machine_id, int stockpile_id);
 void add_input_stockpile_to_machine(int machine_id, int stockpile_id);
+Machine *get_machine_by_id(int id);
 
 void assign_machine_production_job(int machine_id, RecipeName rn);
 
+Worker *get_worker_by_id(int id);
 int add_worker(void);
+
+ObjectReference object_under_point(int x, int y);
 void tick_game(void);

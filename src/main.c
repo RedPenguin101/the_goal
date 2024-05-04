@@ -40,10 +40,11 @@ void draw_frame_in_square(int frame, int row, int col, const Texture2D *tex) {
   DrawTexturePro(*tex, source_rec, dest_rec, (Vector2){0, 0}, 0, BLUE);
 }
 
-void draw_game_state(GameState *gs, const Texture2D *tex) {
+void draw_game_state(GameState *gs, const Texture2D *tex, char *text_buffer) {
   BeginDrawing();
   ClearBackground(RAYWHITE);
 
+  // Draw machines
   for (int i = 0; i < gs->c_machines; i++) {
     Machine w = gs->machines[i];
     for (int i = 0; i < w.size.x; i++) {
@@ -54,6 +55,7 @@ void draw_game_state(GameState *gs, const Texture2D *tex) {
     }
   }
 
+  // Draw stockpiles
   for (int i = 0; i < gs->c_stockpile; i++) {
     Stockpile w = gs->stockpiles[i];
     int start_x = w.location.x;
@@ -78,6 +80,7 @@ void draw_game_state(GameState *gs, const Texture2D *tex) {
     }
   }
 
+  // Draw workers
   for (int i = 0; i < gs->c_workers; i++) {
     Worker w = gs->workers[i];
     draw_frame_in_square(FRAME_WORKER, w.location.x, w.location.y, tex);
@@ -86,6 +89,41 @@ void draw_game_state(GameState *gs, const Texture2D *tex) {
   DrawLine(SQUARE_SIZE * (MAX_X + 1), 0, SQUARE_SIZE * (MAX_X + 1),
            SCREEN_HEIGHT, GRAY);
 
+  // Draw context menu
+  ObjectReference o = object_under_point(gs->cursor.x, gs->cursor.y);
+
+  switch (o.object_type) {
+  case O_NOTHING: {
+    break;
+  }
+  case O_WORKER: {
+    // printf("DEBUG: Worker under cursor\n");
+    Worker *w = get_worker_by_id(o.id);
+    sprintf(text_buffer, "Worker with ID %d", w->id);
+    DrawText(text_buffer, SQUARE_SIZE * (MAX_X + 1) + 20, 20, 20, BLACK);
+    break;
+  }
+  case O_MACHINE: {
+    // printf("DEBUG: Machine under cursor\n");
+    Machine *m = get_machine_by_id(o.id);
+    sprintf(text_buffer, "Machine with ID %d", m->id);
+    DrawText(text_buffer, SQUARE_SIZE * (MAX_X + 1) + 20, 20, 20, BLACK);
+    break;
+  }
+  case O_STOCKPILE: {
+    // printf("DEBUG: Stockpile under cursor\n");
+    Stockpile *s = get_stockpile_by_id(o.id);
+    sprintf(text_buffer, "Stockpile with ID %d", s->id);
+    DrawText(text_buffer, SQUARE_SIZE * (MAX_X + 1) + 20, 20, 20, BLACK);
+    break;
+  }
+  default: {
+    // printf("ERROR: Unrecognized object %d under cursor\n", o.object_type);
+    exit(1);
+  }
+  }
+
+  // draw cursor
   draw_frame_in_square(FRAME_CURSOR, gs->cursor.x, gs->cursor.y, tex);
 
   EndDrawing();
@@ -112,6 +150,12 @@ int main(void) {
 
   srand(time(0));
   GameState *gs = new_game();
+  char *context_menu_text = malloc(sizeof(char) * 100);
+
+  if (!context_menu_text) {
+    printf("Allocation Error for context menu text\n");
+    exit(1);
+  }
 
   int in = add_stockpile(2, 2, 2, 2);
   int out = add_stockpile(2, 6, 3, 3);
@@ -141,7 +185,7 @@ int main(void) {
 
   while (!WindowShouldClose() && !quit) {
     handle_input(gs);
-    draw_game_state(gs, &ascii);
+    draw_game_state(gs, &ascii, context_menu_text);
     if (frame % (FPS / TPS) == 0) {
       tick_game();
       turn++;
@@ -151,6 +195,7 @@ int main(void) {
 
   CloseWindow();
   UnloadTexture(ascii);
+  free(context_menu_text);
 
   return 0;
 }

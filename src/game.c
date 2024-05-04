@@ -392,7 +392,6 @@ char *status_str(enum WorkerStatus s) {
   return _status;
 }
 
-
 void print_worker(const Worker *w) {
   printf("DEBUG: Summary for worker %d: ", w->id);
   printf("\tJOB: %s", job_str(w->job));
@@ -515,7 +514,7 @@ void worker_drop_at_stockpile(Worker *w, Stockpile *s) {
 
   s->contents[s->things_in_stockpile] = w->carrying;
   s->content_count[s->things_in_stockpile] = w->carrying_count;
-  s->things_in_stockpile ++;
+  s->things_in_stockpile++;
   w->carrying_count = 0;
 }
 
@@ -610,7 +609,7 @@ void tick_worker(Worker *w) {
   break;
 
   case NONE: {
-    // randomly wander around   
+    // randomly wander around
     w->location = vec_move_random(w->location, 20);
   } break;
   }
@@ -620,6 +619,37 @@ void tick_worker(Worker *w) {
 /* -------------
  * GAME
  * ------------- */
+
+ObjectReference object_under_point(int x, int y) {
+  // Worker
+  for (int i = 0; i < game.c_workers; i++) {
+    Worker w = game.workers[i];
+    bool in_x_bound = (x == w.location.x);
+    bool in_y_bound = (y == w.location.y);
+    if (in_x_bound && in_y_bound)
+      return (ObjectReference){O_WORKER, w.id};
+  }
+
+  // Machine
+  for (int i = 0; i < game.c_machines; i++) {
+    Machine m = game.machines[i];
+    bool in_x_bound = (x >= m.location.x && x < (m.location.x + m.size.x));
+    bool in_y_bound = (y >= m.location.y && y < (m.location.y + m.size.y));
+    if (in_x_bound && in_y_bound)
+      return (ObjectReference){O_MACHINE, m.id};
+  }
+
+  // Stockpile
+  for (int i = 0; i < game.c_stockpile; i++) {
+    Stockpile s = game.stockpiles[i];
+    bool in_x_bound = (x >= s.location.x && x < (s.location.x + s.size.x));
+    bool in_y_bound = (y >= s.location.y && y < (s.location.y + s.size.y));
+    if (in_x_bound && in_y_bound)
+      return (ObjectReference){O_STOCKPILE, s.id};
+  }
+
+  return (ObjectReference){O_NOTHING, -1};
+}
 
 void tick_game(void) {
 
