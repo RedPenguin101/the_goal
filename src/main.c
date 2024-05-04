@@ -15,6 +15,7 @@
 #define FRAME_MACHINE (13 * 16) + 1
 #define FRAME_STOCKPILE (11 * 16) + 0
 #define FRAME_CURSOR (5 * 16) + 8
+#define FRAME_MATERIAL (1 * 16) + 14
 
 #define FPS 60
 #define TPS 5
@@ -63,20 +64,16 @@ void draw_game_state(GameState *gs, const Texture2D *tex, char *text_buffer) {
 
     for (int i = 0; i < w.size.x; i++) {
       for (int j = 0; j < w.size.y; j++) {
-        draw_frame_in_square(FRAME_STOCKPILE, w.location.x + i,
-                             w.location.y + j, tex);
+        draw_frame_in_square(FRAME_STOCKPILE, start_x + i, start_y + j, tex);
       }
     }
 
     for (int j = 0; j < w.things_in_stockpile; j++) {
-      DrawCircleV(
-          (Vector2){SQUARE_SIZE * (start_x + j) + ((float)SQUARE_SIZE / 2),
-                    SQUARE_SIZE * start_y + ((float)SQUARE_SIZE / 2)},
-          ((float)SQUARE_SIZE / 2), RED);
-      char count[5] = {0};
-      sprintf(count, "%d", w.content_count[j]);
-      DrawText(count, SQUARE_SIZE * (start_x + j) + 10,
-               SQUARE_SIZE * (start_y) + 5, 20, BLACK);
+
+      if (w.content_count[j] > 0) {
+
+        draw_frame_in_square(FRAME_MATERIAL, (start_x + j), (start_y), tex);
+      }
     }
   }
 
@@ -115,6 +112,19 @@ void draw_game_state(GameState *gs, const Texture2D *tex, char *text_buffer) {
     Stockpile *s = get_stockpile_by_id(o.id);
     sprintf(text_buffer, "Stockpile with ID %d", s->id);
     DrawText(text_buffer, SQUARE_SIZE * (MAX_X + 1) + 20, 20, 20, BLACK);
+
+    DrawText("Contains:", SQUARE_SIZE * (MAX_X + 1) + 20, 40, 20, BLACK);
+    int y_offset = 0;
+    for (int i = 0; i < s->things_in_stockpile; i++) {
+      if (s->content_count[i] > 0) {
+        sprintf(text_buffer, "\t%s: %d", material_str(s->contents[i]),
+                s->content_count[i]);
+        DrawText(text_buffer, SQUARE_SIZE * (MAX_X + 1) + 20,
+                 60 + (y_offset * 20), 20, BLACK);
+        y_offset++;
+      }
+    }
+
     break;
   }
   default: {

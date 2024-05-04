@@ -107,6 +107,8 @@ typedef struct GameState {
 
 GameState *new_game(void);
 
+char *material_str(ProductionMaterial m);
+
 int add_stockpile(int x, int y, int w, int h);
 void add_material_to_stockpile(int sid, ProductionMaterial p, int count);
 Stockpile *get_stockpile_by_id(int id);
