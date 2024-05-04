@@ -103,7 +103,7 @@ void draw_game_state(GameState *gs, const Texture2D *tex, char *text_buffer) {
   case O_MACHINE: {
     // printf("DEBUG: Machine under cursor\n");
     Machine *m = get_machine_by_id(o.id);
-    sprintf(text_buffer, "Machine with ID %d", m->id);
+    sprintf(text_buffer, "%s machine %d", machine_str(m->mtype), m->id);
     DrawText(text_buffer, SQUARE_SIZE * (MAX_X + 1) + 20, 20, 20, BLACK);
     break;
   }

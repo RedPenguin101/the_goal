@@ -224,6 +224,29 @@ void remove_material_from_stockpile(Stockpile *s, ProductionMaterial p,
  * MACHINES
  * ------------- */
 
+char _machine[50] = {0};
+
+char *machine_str(enum MachineType m) {
+  switch (m) {
+
+  case WIRE_WINDER: {
+    strcpy(_machine, "WIRE_WINDER");
+    break;
+  }
+
+  case WIRE_PULLER: {
+    strcpy(_machine, "WIRE_PULLER");
+    break;
+  }
+
+  case WIRE_CUTTER: {
+    strcpy(_machine, "WIRE_CUTTER");
+    break;
+  }
+  }
+  return _machine;
+}
+
 int add_machine(enum MachineType type, char *name, int x, int y) {
   int id = game.c_machines;
 
