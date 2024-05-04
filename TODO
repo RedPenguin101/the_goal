@@ -15,7 +15,5 @@ Handling of 'held' jobs
 Walls and pathfinding for workers
 
 Set up room two of factory: pulling lengths, 2x cutting stations, 1x point grinding station
-
-BUG: empty stockpiles should not be shown in stockpiles
-
+BUG: Workers always revert to their previous position after wandering
 selection and target menu

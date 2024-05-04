@@ -22,6 +22,12 @@
 
 bool quit = false;
 
+struct DrawState {
+  GameState *gs;
+  char *context_menu_text;
+  Texture2D *tilemap;
+} draw_state;
+
 Vector2 frame_to_row_col(int frame, int frames_per_row) {
   Vector2 v = {frame % frames_per_row, frame / frames_per_row};
   return v;
@@ -41,7 +47,10 @@ void draw_frame_in_square(int frame, int row, int col, const Texture2D *tex) {
   DrawTexturePro(*tex, source_rec, dest_rec, (Vector2){0, 0}, 0, BLUE);
 }
 
-void draw_game_state(GameState *gs, const Texture2D *tex, char *text_buffer) {
+void draw_game_state(struct DrawState *ds) {
+  GameState *gs = ds->gs;
+  Texture2D *tex = ds->tilemap;
+  char *text_buffer = ds->context_menu_text;
   BeginDrawing();
   ClearBackground(RAYWHITE);
 
@@ -162,6 +171,11 @@ int main(void) {
   GameState *gs = new_game();
   char *context_menu_text = malloc(sizeof(char) * 100);
 
+  struct DrawState ds = {
+      .gs = gs,
+      .context_menu_text = context_menu_text,
+  };
+
   if (!context_menu_text) {
     printf("Allocation Error for context menu text\n");
     exit(1);
@@ -191,11 +205,12 @@ int main(void) {
 
   InitWindow(SCREEN_WIDTH * 2, SCREEN_HEIGHT, "THE_GOAL");
   Texture2D ascii = LoadTexture("assets/16x16-RogueYun-AgmEdit.png");
+  ds.tilemap = &ascii;
   SetTargetFPS(FPS);
 
   while (!WindowShouldClose() && !quit) {
     handle_input(gs);
-    draw_game_state(gs, &ascii, context_menu_text);
+    draw_game_state(&ds);
     if (frame % (FPS / TPS) == 0) {
       tick_game();
       turn++;
