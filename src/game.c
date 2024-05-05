@@ -197,15 +197,22 @@ int add_stockpile(int x, int y, int w, int h) {
     exit(1);
   }
 
-  game.stockpiles[id] = (Stockpile){id, {x, y}, {w, h}, 0, {0}, {0}};
+  game.stockpiles[id] =
+      (Stockpile){id, {x, y}, {w, h}, 0, {0}, {0}, 0, {0}, {0}};
   game.c_stockpile++;
   return id;
 }
 
+void add_required_material_to_stockpile(Stockpile *s, ProductionMaterial m,
+                                        int amount) {
+  s->required_material[s->c_required_material] = m;
+  s->required_material_count[s->c_required_material] = amount;
+  s->c_required_material++;
+}
+
 Stockpile *get_stockpile_by_id(int id) { return &game.stockpiles[id]; }
 
-void add_material_to_stockpile(int sid, ProductionMaterial p, int count) {
-  Stockpile *s = get_stockpile_by_id(sid);
+void add_material_to_stockpile(Stockpile *s, ProductionMaterial p, int count) {
   s->contents[s->things_in_stockpile] = p;
   s->content_count[s->things_in_stockpile] = count;
   s->things_in_stockpile++;

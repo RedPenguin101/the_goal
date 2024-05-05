@@ -138,6 +138,7 @@ void draw_game_state(struct DrawState *ds) {
   }
   case O_STOCKPILE: {
     // printf("DEBUG: Stockpile under cursor\n");
+
     Stockpile *s = get_stockpile_by_id(o.id);
     sprintf(text_buffer, "Stockpile with ID %d", s->id);
     DrawTextEx(*font, text_buffer,
@@ -148,14 +149,35 @@ void draw_game_state(struct DrawState *ds) {
         *font, "Contains",
         (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, (font_size * 2)},
         font_size, 4, BLUE);
-    int y_offset = 0;
+
+    int y_offset = 3;
+
     for (int i = 0; i < s->things_in_stockpile; i++) {
       if (s->content_count[i] > 0) {
         sprintf(text_buffer, "\t%s: %d", material_str(s->contents[i]),
                 s->content_count[i]);
         DrawTextEx(*font, text_buffer,
                    (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
-                             (font_size * (3 + y_offset))},
+                             (font_size * y_offset)},
+                   font_size, 4, BLUE);
+        y_offset++;
+      }
+    }
+
+    DrawTextEx(*font, "Requires",
+               (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
+                         (font_size * y_offset)},
+               font_size, 4, BLUE);
+
+    y_offset++;
+
+    for (int i = 0; i < s->c_required_material; i++) {
+      if (s->required_material_count[i] > 0) {
+        sprintf(text_buffer, "\t%s: %d", material_str(s->required_material[i]),
+                s->required_material_count[i]);
+        DrawTextEx(*font, text_buffer,
+                   (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
+                             (font_size * y_offset)},
                    font_size, 4, BLUE);
         y_offset++;
       }
@@ -208,18 +230,23 @@ int main(void) {
     exit(1);
   }
 
+  // Winder machine
   int in = add_stockpile(2, 2, 2, 2);
+  Stockpile *s_in = get_stockpile_by_id(in);
   int out = add_stockpile(2, 6, 3, 3);
-  add_material_to_stockpile(in, WASHED_IRON_WIRE_COIL, 1);
-  add_material_to_stockpile(in, EMPTY_SPINDLE, 1);
+  add_material_to_stockpile(s_in, WASHED_IRON_WIRE_COIL, 1);
+  add_material_to_stockpile(s_in, EMPTY_SPINDLE, 1);
 
   int winder = add_machine(WIRE_WINDER, "WireWind", 2, 4);
   add_output_stockpile_to_machine(winder, out);
   add_input_stockpile_to_machine(winder, in);
 
+  // Puller machine
   out = add_stockpile(11, 10, 3, 3);
   in = add_stockpile(7, 10, 2, 2);
   // add_material_to_stockpile(in, SPINDLED_WIRE_COIL, 5);
+  s_in = get_stockpile_by_id(in);
+  add_required_material_to_stockpile(s_in, SPINDLED_WIRE_COIL, 5);
 
   int puller = add_machine(WIRE_PULLER, "WirePull1", 9, 10);
   add_output_stockpile_to_machine(puller, out);

@@ -87,9 +87,14 @@ typedef struct Stockpile {
   int id;
   Vector location;
   Vector size;
+
   int things_in_stockpile;
   ProductionMaterial contents[10];
   int content_count[10];
+
+  int c_required_material;
+  ProductionMaterial required_material[10];
+  int required_material_count[10];
 } Stockpile;
 
 typedef struct GameState {
@@ -112,7 +117,9 @@ char *machine_str(enum MachineType m);
 char *recipe_str(RecipeName rn);
 
 int add_stockpile(int x, int y, int w, int h);
-void add_material_to_stockpile(int sid, ProductionMaterial p, int count);
+void add_material_to_stockpile(Stockpile *s, ProductionMaterial p, int count);
+void add_required_material_to_stockpile(Stockpile *s, ProductionMaterial p,
+                                        int count);
 Stockpile *get_stockpile_by_id(int id);
 
 int add_machine(enum MachineType type, char *name, int x, int y);
