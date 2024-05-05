@@ -26,3 +26,7 @@ REPLENISH ORDER
 A stockpile has a 'replenishment threshold' for any material that is needed.
 If the inventory in that stockpile falls below that threshold, a replenishment job is created
 The replenishment job causes a worker to find the required material in another stockpile and move it to the target stockpile.
+
+If workers pick up a job but can't complete it, they should idle.
+
+Pause on pressing P

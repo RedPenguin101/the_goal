@@ -110,10 +110,11 @@ void draw_game_state(struct DrawState *ds) {
   case O_WORKER: {
     // printf("DEBUG: Worker under cursor\n");
     Worker *w = get_worker_by_id(o.id);
-    sprintf(text_buffer, "Worker with ID %d", w->id);
+    sprintf(text_buffer, "Worker %d, doing %s", w->id, job_str(w->job));
     DrawTextEx(*font, text_buffer,
                (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, font_size},
                font_size, 4, BLUE);
+
     break;
   }
   case O_MACHINE: {
