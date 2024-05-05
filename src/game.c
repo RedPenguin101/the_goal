@@ -28,10 +28,20 @@ void add_message(char *message) {
  * MATERIALS
  * ------------- */
 
+typedef struct MaterialCount {
+  ProductionMaterial material;
+  int count;
+} MaterialCount;
+
 char _material[50] = {0};
 
 char *material_str(ProductionMaterial m) {
   switch (m) {
+
+  case NONE: {
+    strcpy(_material, "NONE");
+    break;
+  }
 
   case EMPTY_SPINDLE: {
     strcpy(_material, "EMPTY_SPINDLE");
@@ -66,7 +76,7 @@ int job_queue_head = 0;
 int job_queue_tail = 0;
 
 struct JobQueueItem {
-  int machine_id;
+  ObjectReference object;
   enum Job job;
 } job_queue[MAX_JOB_QUEUE];
 
@@ -75,23 +85,28 @@ char _job[50] = {0};
 char *job_str(enum Job j) {
   switch (j) {
 
-  case NONE: {
-    strcpy(_job, "NONE");
+  case JOB_NONE: {
+    strcpy(_job, "JOB_NONE");
     break;
   }
 
-  case MAN_MACHINE: {
-    strcpy(_job, "MAN_MACHINE");
+  case JOB_MAN_MACHINE: {
+    strcpy(_job, "JOB_MAN_MACHINE");
     break;
   }
 
-  case EMPTY_OUTPUT_BUFFER: {
-    strcpy(_job, "EMPTY_OUTPUT_BUFFER");
+  case JOB_EMPTY_OUTPUT_BUFFER: {
+    strcpy(_job, "JOB_EMPTY_OUTPUT_BUFFER");
     break;
   }
 
-  case FILL_INPUT_BUFFER: {
-    strcpy(_job, "FILL_INPUT_BUFFER");
+  case JOB_FILL_INPUT_BUFFER: {
+    strcpy(_job, "JOB_FILL_INPUT_BUFFER");
+    break;
+  }
+
+  case JOB_REPLENISH_STOCKPILE: {
+    strcpy(_job, "JOB_REPLENISH_STOCKPILE");
     break;
   }
   }
@@ -99,9 +114,10 @@ char *job_str(enum Job j) {
   return _job;
 }
 
-void enqueue_job(int mid, enum Job job) {
-  printf("DEBUG_ENQUEUE_JOB: MachineID %d and job %s\n", mid, job_str(job));
-  job_queue[job_queue_tail].machine_id = mid;
+void enqueue_job(ObjectReference o, enum Job job) {
+  // printf("DEBUG_ENQUEUE_JOB: MachineID %d and job %s\n", machine_id,
+  // job_str(job));
+  job_queue[job_queue_tail].object = o;
   job_queue[job_queue_tail].job = job;
   job_queue_tail++;
   if (job_queue_tail > MAX_JOB_QUEUE) {
@@ -111,13 +127,24 @@ void enqueue_job(int mid, enum Job job) {
 
 bool jobs_on_queue(void) { return job_queue_tail != job_queue_head; }
 
+// @BUG: Actually this won't work because the job could be assigned to the
+// worker.
+bool outstanding_replenishment_order(int stockpile_id) {
+  for (int i = 0; i < MAX_JOB_QUEUE; i++) {
+    if (job_queue[i].job == JOB_REPLENISH_STOCKPILE &&
+        job_queue[i].object.id == stockpile_id)
+      return true;
+  }
+  return false;
+}
+
 struct JobQueueItem pop_job(void) {
   struct JobQueueItem j;
   if (job_queue_tail == job_queue_head) {
-    j.machine_id = -1;
+    j.object.id = -1;
     j.job = 0;
   } else {
-    j.machine_id = job_queue[job_queue_head].machine_id;
+    j.object = job_queue[job_queue_head].object;
     j.job = job_queue[job_queue_head].job;
     job_queue_head++;
   }
@@ -197,8 +224,16 @@ int add_stockpile(int x, int y, int w, int h) {
     exit(1);
   }
 
-  game.stockpiles[id] =
-      (Stockpile){id, {x, y}, {w, h}, 0, {0}, {0}, 0, {0}, {0}};
+  game.stockpiles[id] = (Stockpile){.id = id,
+                                    .location = {x, y},
+                                    .size = {w, h},
+                                    .can_be_taken_from = false,
+                                    .things_in_stockpile = 0,
+                                    .contents = {0},
+                                    .content_count = {0},
+                                    .c_required_material = 0,
+                                    .required_material = {0},
+                                    .required_material_count = {0}};
   game.c_stockpile++;
   return id;
 }
@@ -226,6 +261,31 @@ int material_in_stockpile(Stockpile const *s, ProductionMaterial p) {
     }
   }
   return count;
+}
+
+Stockpile *find_stockpile_with_material(MaterialCount mc) {
+  for (int i = 0; i < game.c_stockpile; i++) {
+    Stockpile s = game.stockpiles[i];
+    if (s.can_be_taken_from && material_in_stockpile(&s, mc.material) > 0) {
+      return &game.stockpiles[i];
+    }
+  }
+  return NULL;
+}
+
+MaterialCount next_replenishement_need(Stockpile *s) {
+  for (int j = 0; j < s->c_required_material; j++) {
+    int mis = material_in_stockpile(s, s->required_material[j]);
+    /*     printf("DEBUG: Stockpile %d needs %d of %s", s->id,
+               s->required_material_count[j],
+               material_str(s->required_material[j]));
+        printf(" and has %d\n", mis); */
+    if (s->required_material_count[j] > mis) {
+      return (MaterialCount){s->required_material[j],
+                             s->required_material_count[j] - mis};
+    }
+  }
+  return (MaterialCount){NONE, -1};
 }
 
 void remove_material_from_stockpile(Stockpile *s, ProductionMaterial p,
@@ -329,13 +389,13 @@ void assign_machine_production_job(int id, RecipeName rn) {
   m->current_work_order = true;
   m->recipe = r;
   m->job_time_left = r.time;
-  enqueue_job(id, MAN_MACHINE);
+  enqueue_job((ObjectReference){O_MACHINE, id}, JOB_MAN_MACHINE);
 }
 
 void complete_production(Machine *m) {
   Worker *w = get_worker_by_id(m->worker);
   w->status = W_IDLE;
-  w->job = NONE;
+  w->job = JOB_NONE;
 
   int num_outputs = m->recipe.o_count;
   m->current_work_order = false;
@@ -347,7 +407,7 @@ void complete_production(Machine *m) {
     m->output_buffer_count[i] = m->recipe.outputs_count[i];
   }
 
-  enqueue_job(m->id, EMPTY_OUTPUT_BUFFER);
+  enqueue_job((ObjectReference){O_MACHINE, m->id}, JOB_EMPTY_OUTPUT_BUFFER);
 }
 
 int machine_has_input(Machine *m, ProductionMaterial p) {
@@ -359,11 +419,6 @@ int machine_has_input(Machine *m, ProductionMaterial p) {
   }
   return count;
 }
-
-typedef struct MaterialCount {
-  ProductionMaterial material;
-  int count;
-} MaterialCount;
 
 MaterialCount next_unfullfilled_material(Machine *m, Recipe r) {
   MaterialCount mc = {-1, 0};
@@ -485,17 +540,19 @@ int add_worker(void) {
 }
 
 void worker_take_job(int worker_id, struct JobQueueItem jq) {
-  Machine *m = get_machine_by_id(jq.machine_id);
   Worker *w = get_worker_by_id(worker_id);
-  w->status = W_MOVING;
-  w->machine = m;
-  w->job = jq.job;
 
   char mb[256] = {0};
 
   switch (jq.job) {
-  case MAN_MACHINE:
+  case JOB_MAN_MACHINE: {
+    Machine *m = get_machine_by_id(jq.object.id);
+
     w->target = m->location;
+
+    w->job = jq.job;
+    w->job_target = jq.object;
+    w->status = W_MOVING;
 
     printf("DEBUG_WORKER_TAKE_JOB: worker %d took job to to man machine %s\n",
            worker_id, m->name);
@@ -504,16 +561,45 @@ void worker_take_job(int worker_id, struct JobQueueItem jq) {
     add_message(mb);
 
     break;
-  case EMPTY_OUTPUT_BUFFER:
+  }
+  case JOB_EMPTY_OUTPUT_BUFFER: {
+    Machine *m = get_machine_by_id(jq.object.id);
     w->target = m->location;
+    w->status = W_MOVING;
+    w->job = jq.job;
     sprintf(mb, "%ld: assigning worker %d to empty machine %s\n", game.turn,
             worker_id, m->name);
     printf("DEBUG_WORKER_TAKE_JOB: worker %d took job to empty machine %s\n",
            worker_id, m->name);
     add_message(mb);
     break;
+  }
+  case JOB_REPLENISH_STOCKPILE: {
+    Stockpile *s = get_stockpile_by_id(jq.object.id);
+    MaterialCount mc = next_replenishement_need(s);
+    Stockpile *t = find_stockpile_with_material(mc);
+    printf(
+        "DEBUG_WORKER_TAKE_JOB: worker %d took job to replenish stockpile %d\n",
+        worker_id, s->id);
+    if (!t) {
+      w->status = W_CANT_PROCEED;
+      w->job = JOB_REPLENISH_STOCKPILE;
+      w->job_target = jq.object;
+      printf(
+          "DEBUG: Worker %d Tried to replenish stockpile, but couldn't find a "
+          "suitable source\n",
+          worker_id);
+    } else {
+      w->target = t->location;
+      w->status = W_MOVING;
+      w->job = jq.job;
+      w->job_target = jq.object;
+    }
+    // w->target = s->location;
+    break;
+  }
   default:
-    printf("ERROR: Couldn't find job\n");
+    printf("ERROR: Couldn't find job for job type %s\n", job_str(jq.job));
     exit(EXIT_FAILURE);
   }
 }
@@ -583,7 +669,26 @@ void tick_worker(Worker *w) {
     // continue with their intended task. Otherwise they should continue to
     // hold.
 
-    w->location = vec_move_random(w->location, 20);
+    switch (w->job) {
+    case JOB_REPLENISH_STOCKPILE: {
+      Stockpile *s = get_stockpile_by_id(w->job_target.id);
+      MaterialCount mc = next_replenishement_need(s);
+      Stockpile *t = find_stockpile_with_material(mc);
+      printf("DEBUG: worker %d is replenishing stockpile %d with %d of "
+             "material %s\n",
+             w->id, s->id, mc.count, material_str(mc.material));
+      if (t) {
+        w->target = t->location;
+        w->status = W_MOVING;
+      }
+      break;
+    }
+    default:
+      printf("ERROR: Worker %d has 'Can't proceed' status with job %s\n", w->id,
+             job_str(w->job));
+      exit(1);
+    }
+
     return;
   }
 
@@ -594,23 +699,25 @@ void tick_worker(Worker *w) {
 
   // Worker is at its destination
   switch (w->job) {
-  case EMPTY_OUTPUT_BUFFER: {
+  case JOB_EMPTY_OUTPUT_BUFFER: {
 
     if (w->status == W_CARRYING) {
-      Stockpile *s = get_stockpile_by_id(w->machine->output_stockpile);
+      Machine *m = get_machine_by_id(w->job_target.id);
+      Stockpile *s = get_stockpile_by_id(m->output_stockpile);
       worker_drop_at_stockpile(w, s);
 
-      if (w->machine->outputs == 0) {
+      if (m->outputs == 0) {
         w->status = W_IDLE;
-        w->job = NONE;
+        w->job = JOB_NONE;
       } else {
         w->status = W_MOVING;
-        w->target = w->machine->location;
+        w->target = m->location;
       }
 
     } else if (w->status == W_MOVING) {
-      Stockpile *s = get_stockpile_by_id(w->machine->output_stockpile);
-      worker_pickup_output(w, w->machine);
+      Machine *m = get_machine_by_id(w->job_target.id);
+      Stockpile *s = get_stockpile_by_id(m->output_stockpile);
+      worker_pickup_output(w, m);
       w->status = W_CARRYING;
       w->target = s->location;
     } else {
@@ -620,9 +727,8 @@ void tick_worker(Worker *w) {
 
   } break;
 
-  case FILL_INPUT_BUFFER: {
-    Machine *m = w->machine;
-
+  case JOB_FILL_INPUT_BUFFER: {
+    Machine *m = get_machine_by_id(w->job_target.id);
     Stockpile *s = get_stockpile_by_id(m->input_stockpile);
 
     if (w->status == W_CARRYING) {
@@ -642,7 +748,7 @@ void tick_worker(Worker *w) {
         printf("DEBUG_TICK_WORKER: Machine has what it needs, switching to "
                "producing\n");
         m->worker = w->id;
-        w->job = MAN_MACHINE;
+        w->job = JOB_MAN_MACHINE;
         w->status = W_PRODUCING;
       }
     } else if (w->status == W_MOVING) {
@@ -656,7 +762,8 @@ void tick_worker(Worker *w) {
         w->target = m->location;
         w->status = W_CARRYING;
       } else {
-        printf("DEBUG: Worker tried to pick up material from stockpile, but there wasn't enough in it.\n");
+        printf("DEBUG: Worker tried to pick up material from stockpile, but "
+               "there wasn't enough in it.\n");
         w->status = W_CANT_PROCEED;
       }
     } else {
@@ -666,18 +773,18 @@ void tick_worker(Worker *w) {
 
     break;
 
-  case MAN_MACHINE: {
+  case JOB_MAN_MACHINE: {
     if (w->status == W_PRODUCING) {
       return;
     }
-    Machine *m = w->machine;
+    Machine *m = get_machine_by_id(w->job_target.id);
 
     if (machine_has_required_inputs(m, m->recipe)) {
       w->status = W_PRODUCING;
       return;
     }
 
-    w->job = FILL_INPUT_BUFFER;
+    w->job = JOB_FILL_INPUT_BUFFER;
     w->status = W_MOVING;
     Stockpile *s = get_stockpile_by_id(m->input_stockpile);
     w->target = s->location;
@@ -685,9 +792,14 @@ void tick_worker(Worker *w) {
 
   break;
 
-  case NONE: {
+  case JOB_REPLENISH_STOCKPILE: {
+    printf("ERROR: Replenish job not implemented\n");
+    exit(1);
+    break;
+  }
+
+  case JOB_NONE: {
     // randomly wander around
-    w->location = vec_move_random(w->location, 20);
   } break;
   }
   }
@@ -729,6 +841,20 @@ ObjectReference object_under_point(int x, int y) {
 }
 
 void tick_game(void) {
+  for (int i = 0; i < game.c_stockpile; i++) {
+    Stockpile s = game.stockpiles[i];
+    // printf("%d outstanding repl order? %d\n", s.id,
+    // outstanding_replenishment_order(s.id));
+    if (!outstanding_replenishment_order(s.id)) {
+      MaterialCount need = next_replenishement_need(&s);
+      if (need.material != NONE) {
+        printf("DEBUG: Stockpile %d needs material %s\n", s.id,
+               material_str(need.material));
+        enqueue_job((ObjectReference){O_STOCKPILE, s.id},
+                    JOB_REPLENISH_STOCKPILE);
+      }
+    }
+  }
 
   if (jobs_on_queue()) {
     int idle_worker = first_idle_worker();

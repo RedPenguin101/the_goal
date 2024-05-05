@@ -137,11 +137,10 @@ void draw_game_state(struct DrawState *ds) {
           font_size, 4, BLUE);
     }
 
-    DrawTextEx(
-          *font, "a) add job",
-          (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
-                    SQUARE_SIZE * (MAX_Y - 2)},
-          font_size, 4, BLUE);
+    DrawTextEx(*font, "a) add job",
+               (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
+                         SQUARE_SIZE * (MAX_Y - 2)},
+               font_size, 4, BLUE);
     break;
   }
   case O_STOCKPILE: {
@@ -239,10 +238,9 @@ void handle_input(GameState *gs) {
     if (IsKeyPressed(KEY_A)) {
       // @HACK, this is game logic, shouldn't be here.
       // possible jobs should be part of machine definition
-      Machine* m = get_machine_by_id(o.id);
+      Machine *m = get_machine_by_id(o.id);
       RecipeName r;
-      switch (m->mtype)
-      {
+      switch (m->mtype) {
       case WIRE_PULLER:
         r = PULL_WIRE;
         break;
@@ -250,7 +248,7 @@ void handle_input(GameState *gs) {
       case WIRE_WINDER:
         r = WIND_WIRE;
         break;
-      
+
       default:
         break;
       }
@@ -281,6 +279,8 @@ int main(void) {
   int in = add_stockpile(2, 2, 2, 2);
   Stockpile *s_in = get_stockpile_by_id(in);
   int out = add_stockpile(2, 6, 3, 3);
+  Stockpile *s_out = get_stockpile_by_id(out);
+  s_out->can_be_taken_from = true;
   add_material_to_stockpile(s_in, WASHED_IRON_WIRE_COIL, 1);
   add_material_to_stockpile(s_in, EMPTY_SPINDLE, 1);
 
@@ -290,6 +290,9 @@ int main(void) {
 
   // Puller machine
   out = add_stockpile(11, 10, 3, 3);
+  s_out = get_stockpile_by_id(out);
+  s_out->can_be_taken_from = true;
+
   in = add_stockpile(7, 10, 2, 2);
   // add_material_to_stockpile(in, SPINDLED_WIRE_COIL, 5);
   s_in = get_stockpile_by_id(in);

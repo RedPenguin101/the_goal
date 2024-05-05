@@ -18,7 +18,13 @@ typedef struct ObjectReference {
   int id;
 } ObjectReference;
 
-enum Job { NONE, MAN_MACHINE, EMPTY_OUTPUT_BUFFER, FILL_INPUT_BUFFER };
+enum Job {
+  JOB_NONE,
+  JOB_MAN_MACHINE,
+  JOB_EMPTY_OUTPUT_BUFFER,
+  JOB_FILL_INPUT_BUFFER,
+  JOB_REPLENISH_STOCKPILE
+};
 
 typedef enum RecipeName {
   WIND_WIRE,
@@ -27,6 +33,7 @@ typedef enum RecipeName {
 } RecipeName;
 
 typedef enum ProductionMaterial {
+  NONE,
   WASHED_IRON_WIRE_COIL,
   EMPTY_SPINDLE,
   SPINDLED_WIRE_COIL,
@@ -78,7 +85,7 @@ typedef struct Worker {
   Vector location;
   Vector target;
   enum Job job;
-  Machine *machine;
+  ObjectReference job_target;
   ProductionMaterial carrying;
   int carrying_count;
 } Worker;
@@ -87,6 +94,7 @@ typedef struct Stockpile {
   int id;
   Vector location;
   Vector size;
+  bool can_be_taken_from;
 
   int things_in_stockpile;
   ProductionMaterial contents[10];
