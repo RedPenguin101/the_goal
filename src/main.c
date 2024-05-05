@@ -22,6 +22,7 @@
 #define TPS 5
 
 bool quit = false;
+bool paused = false;
 
 struct DrawState {
   GameState *gs;
@@ -194,6 +195,13 @@ void draw_game_state(struct DrawState *ds) {
   // draw cursor
   draw_frame_in_square(FRAME_CURSOR, gs->cursor.x, gs->cursor.y, tex);
 
+  if (paused) {
+    DrawTextEx(*font, "PAUSED",
+               (Vector2){SQUARE_SIZE * (MAX_X / 2.0f) + font_size,
+                         SQUARE_SIZE * (MAX_Y - 1)},
+               font_size, 4, BLUE);
+  }
+
   EndDrawing();
 }
 
@@ -209,6 +217,9 @@ void handle_input(GameState *gs) {
   }
   if (IsKeyPressed(KEY_DOWN) && (gs->cursor.y < MAX_Y)) {
     gs->cursor.y++;
+  }
+  if (IsKeyPressed(KEY_P)) {
+    paused = !paused;
   }
 }
 
@@ -267,7 +278,7 @@ int main(void) {
   while (!WindowShouldClose() && !quit) {
     handle_input(gs);
     draw_game_state(&ds);
-    if (frame % (FPS / TPS) == 0) {
+    if (frame % (FPS / TPS) == 0 && !paused) {
       tick_game();
       turn++;
     }
