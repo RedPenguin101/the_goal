@@ -136,6 +136,12 @@ void draw_game_state(struct DrawState *ds) {
           (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, (font_size * 2)},
           font_size, 4, BLUE);
     }
+
+    DrawTextEx(
+          *font, "a) add job",
+          (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
+                    SQUARE_SIZE * (MAX_Y - 2)},
+          font_size, 4, BLUE);
     break;
   }
   case O_STOCKPILE: {
@@ -227,6 +233,29 @@ void handle_input(GameState *gs) {
   }
   if (IsKeyPressed(KEY_P)) {
     paused = !paused;
+  }
+  ObjectReference o = object_under_point(gs->cursor.x, gs->cursor.y);
+  if (o.object_type == O_MACHINE) {
+    if (IsKeyPressed(KEY_A)) {
+      // @HACK, this is game logic, shouldn't be here.
+      // possible jobs should be part of machine definition
+      Machine* m = get_machine_by_id(o.id);
+      RecipeName r;
+      switch (m->mtype)
+      {
+      case WIRE_PULLER:
+        r = PULL_WIRE;
+        break;
+
+      case WIRE_WINDER:
+        r = WIND_WIRE;
+        break;
+      
+      default:
+        break;
+      }
+      assign_machine_production_job(o.id, r);
+    }
   }
 }
 
