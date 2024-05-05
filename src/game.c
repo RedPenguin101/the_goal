@@ -435,6 +435,7 @@ void complete_production(Machine *m) {
   Worker *w = get_worker_by_id(m->worker);
   w->status = W_IDLE;
   w->job = JOB_NONE;
+  w->target = (Vector){15, 0};
 
   int num_outputs = m->active_recipe.c_outputs;
   m->has_current_work_order = false;
@@ -748,6 +749,7 @@ void tick_worker(Worker *w) {
       if (m->c_output_buffer == 0) {
         w->status = W_IDLE;
         w->job = JOB_NONE;
+        w->target = (Vector){15, 0};
       } else {
         w->status = W_MOVING;
         w->target = m->location;
@@ -858,6 +860,7 @@ void tick_worker(Worker *w) {
       w->job = JOB_NONE;
       w->job_target = (ObjectReference){O_NOTHING, -1};
       w->status = W_IDLE;
+      w->target = (Vector){15, 0};
       w->carrying = NONE;
       w->carrying_count = 0;
     } else {
