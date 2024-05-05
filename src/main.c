@@ -82,9 +82,9 @@ void draw_game_state(struct DrawState *ds) {
       }
     }
 
-    for (int j = 0; j < w.things_in_stockpile; j++) {
+    for (int j = 0; j < w.c_contents; j++) {
 
-      if (w.content_count[j] > 0) {
+      if (w.contents_count[j] > 0) {
 
         draw_frame_in_square(FRAME_MATERIAL, (start_x + j), (start_y), tex);
       }
@@ -120,12 +120,13 @@ void draw_game_state(struct DrawState *ds) {
   case O_MACHINE: {
     // printf("DEBUG: Machine under cursor\n");
     Machine *m = get_machine_by_id(o.id);
-    sprintf(text_buffer, "%s machine %d", machine_str(m->mtype), m->id);
+    sprintf(text_buffer, "%s machine %d", machine_str(m->type), m->id);
     DrawTextEx(*font, text_buffer,
                (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, font_size},
                font_size, 4, BLUE);
-    if (m->current_work_order) {
-      sprintf(text_buffer, "Machining batch of %s", recipe_str(m->recipe.name));
+    if (m->has_current_work_order) {
+      sprintf(text_buffer, "Machining batch of %s",
+              recipe_str(m->active_recipe.name));
       DrawTextEx(
           *font, text_buffer,
           (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, (font_size * 2)},
@@ -154,17 +155,17 @@ void draw_game_state(struct DrawState *ds) {
 
     int y_offset = 2;
 
-    if (s->things_in_stockpile > 0) {
+    if (s->c_contents > 0) {
       DrawTextEx(
           *font, "Contains",
           (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, (font_size * 2)},
           font_size, 4, BLUE);
       y_offset++;
 
-      for (int i = 0; i < s->things_in_stockpile; i++) {
-        if (s->content_count[i] > 0) {
+      for (int i = 0; i < s->c_contents; i++) {
+        if (s->contents_count[i] > 0) {
           sprintf(text_buffer, "\t%s: %d", material_str(s->contents[i]),
-                  s->content_count[i]);
+                  s->contents_count[i]);
           DrawTextEx(*font, text_buffer,
                      (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
                                (font_size * y_offset)},
@@ -246,7 +247,7 @@ void handle_input(GameState *gs) {
       // possible jobs should be part of machine definition
       Machine *m = get_machine_by_id(o.id);
       RecipeName r;
-      switch (m->mtype) {
+      switch (m->type) {
       case WIRE_PULLER:
         r = PULL_WIRE;
         break;

@@ -171,19 +171,19 @@ struct JobQueueItem pop_job(void) {
  * ------------- */
 
 const Recipe wind_wire = {.name = WIND_WIRE,
-                          .i_count = 2,
+                          .c_inputs = 2,
                           .inputs = {WASHED_IRON_WIRE_COIL, EMPTY_SPINDLE},
                           .inputs_count = {1, 1},
-                          .o_count = 1,
+                          .c_outputs = 1,
                           .outputs = {SPINDLED_WIRE_COIL},
                           .outputs_count = {1},
                           .time = 1};
 
 const Recipe pull_wire = {.name = PULL_WIRE,
-                          .i_count = 1,
+                          .c_inputs = 1,
                           .inputs = {SPINDLED_WIRE_COIL},
                           .inputs_count = {1},
-                          .o_count = 1,
+                          .c_outputs = 1,
                           .outputs = {WIRE},
                           .outputs_count = {100},
                           .time = 1};
@@ -243,9 +243,9 @@ int add_stockpile(int x, int y, int w, int h) {
                                     .location = {x, y},
                                     .size = {w, h},
                                     .can_be_taken_from = false,
-                                    .things_in_stockpile = 0,
+                                    .c_contents = 0,
                                     .contents = {0},
-                                    .content_count = {0},
+                                    .contents_count = {0},
                                     .c_required_material = 0,
                                     .required_material = {0},
                                     .required_material_count = {0}};
@@ -263,16 +263,16 @@ void add_required_material_to_stockpile(Stockpile *s, ProductionMaterial m,
 Stockpile *get_stockpile_by_id(int id) { return &game.stockpiles[id]; }
 
 void add_material_to_stockpile(Stockpile *s, ProductionMaterial p, int count) {
-  s->contents[s->things_in_stockpile] = p;
-  s->content_count[s->things_in_stockpile] = count;
-  s->things_in_stockpile++;
+  s->contents[s->c_contents] = p;
+  s->contents_count[s->c_contents] = count;
+  s->c_contents++;
 }
 
 int material_in_stockpile(Stockpile const *s, ProductionMaterial p) {
   int count = 0;
-  for (int i = 0; i < s->things_in_stockpile; i++) {
+  for (int i = 0; i < s->c_contents; i++) {
     if (s->contents[i] == p) {
-      count += s->content_count[i];
+      count += s->contents_count[i];
     }
   }
   return count;
@@ -312,12 +312,12 @@ void remove_material_from_stockpile(Stockpile *s, ProductionMaterial p,
   }
 
   int remaining = count;
-  for (int i = 0; i < s->things_in_stockpile; i++) {
+  for (int i = 0; i < s->c_contents; i++) {
     if (s->contents[i] == p) {
-      int available = s->content_count[i];
+      int available = s->contents_count[i];
       int to_remove = (available > remaining) ? remaining : available;
       remaining -= to_remove;
-      s->content_count[i] -= to_remove;
+      s->contents_count[i] -= to_remove;
     }
     if (remaining == 0) {
       return;
@@ -368,10 +368,10 @@ int add_machine(enum MachineType type, char *name, int x, int y) {
   game.machines[id] = (Machine){
       .id = id,
       .name = {0},
-      .mtype = type,
+      .type = type,
       .job_time_left = 0,
-      .current_work_order = false,
-      .outputs = 0,
+      .has_current_work_order = false,
+      .c_output_buffer = 0,
       .worker = -1,
       .location = (Vector){x, y},
       .size = (Vector){2, 2},
@@ -401,8 +401,8 @@ void assign_machine_production_job(int id, RecipeName rn) {
   Recipe r = get_recipe_from_name(rn);
   Machine *m = get_machine_by_id(id);
 
-  m->current_work_order = true;
-  m->recipe = r;
+  m->has_current_work_order = true;
+  m->active_recipe = r;
   m->job_time_left = r.time;
   enqueue_job((ObjectReference){O_MACHINE, id}, JOB_MAN_MACHINE);
 }
@@ -412,14 +412,14 @@ void complete_production(Machine *m) {
   w->status = W_IDLE;
   w->job = JOB_NONE;
 
-  int num_outputs = m->recipe.o_count;
-  m->current_work_order = false;
+  int num_outputs = m->active_recipe.c_outputs;
+  m->has_current_work_order = false;
   m->worker = -1;
-  m->outputs = num_outputs;
+  m->c_output_buffer = num_outputs;
 
   for (int i = 0; i < num_outputs; i++) {
-    m->output_buffer[i] = m->recipe.outputs[i];
-    m->output_buffer_count[i] = m->recipe.outputs_count[i];
+    m->output_buffer[i] = m->active_recipe.outputs[i];
+    m->output_buffer_count[i] = m->active_recipe.outputs_count[i];
   }
 
   enqueue_job((ObjectReference){O_MACHINE, m->id}, JOB_EMPTY_OUTPUT_BUFFER);
@@ -427,7 +427,7 @@ void complete_production(Machine *m) {
 
 int machine_has_input(Machine *m, ProductionMaterial p) {
   int count = 0;
-  for (int i = 0; i < m->inputs; i++) {
+  for (int i = 0; i < m->c_input_buffer; i++) {
     if (m->input_buffer[i] == p) {
       count += m->input_buffer_count[i];
     }
@@ -438,7 +438,7 @@ int machine_has_input(Machine *m, ProductionMaterial p) {
 MaterialCount next_unfullfilled_material(Machine *m, Recipe r) {
   MaterialCount mc = {-1, 0};
 
-  for (int i = 0; i < r.i_count; i++) {
+  for (int i = 0; i < r.c_inputs; i++) {
     ProductionMaterial p = r.inputs[i];
     int required = r.inputs_count[i];
 
@@ -463,8 +463,8 @@ bool machine_has_required_inputs(Machine *m, Recipe r) {
 }
 
 void tick_machine(Machine *m) {
-  if (m->current_work_order && m->worker >= 0 &&
-      machine_has_required_inputs(m, m->recipe)) {
+  if (m->has_current_work_order && m->worker >= 0 &&
+      machine_has_required_inputs(m, m->active_recipe)) {
     // printf("DEBUG_TICK_MACHINE: machine is working...\n");
     if (m->job_time_left > 0) {
       m->job_time_left--;
@@ -473,7 +473,7 @@ void tick_machine(Machine *m) {
 
       printf("DEBUG_%ld: Machine %s produced output: ", game.turn, m->name);
 
-      for (int i = 0; i < m->outputs; i++)
+      for (int i = 0; i < m->c_output_buffer; i++)
         printf("%s: %d\n", material_str(m->output_buffer[i]),
                m->output_buffer_count[i]);
     }
@@ -622,8 +622,8 @@ void worker_take_job(int worker_id, struct JobQueueItem jq) {
 void worker_pickup_output(Worker *w, Machine *m) {
   // printf("DEBUG: %d\n", m->outputs);
   // printf("DEBUG: %d\n", m->output_buffer[0]);
-  m->outputs--;
-  int o = m->outputs;
+  m->c_output_buffer--;
+  int o = m->c_output_buffer;
   ProductionMaterial mat = m->output_buffer[o];
   int mat_count = m->output_buffer_count[o];
   w->carrying = mat;
@@ -636,14 +636,14 @@ void worker_drop_material_at_machine(Worker *w, Machine *m) {
   // printf("DEBUG: %d\n", m->outputs);
   // printf("DEBUG: %d\n", m->output_buffer[0]);
 
-  int i = m->inputs;
+  int i = m->c_input_buffer;
   m->input_buffer[i] = w->carrying;
   m->input_buffer_count[i] = w->carrying_count;
 
   w->carrying = -1;
   w->carrying_count = 0;
 
-  m->inputs++;
+  m->c_input_buffer++;
   printf("DEBUG_%ld: worker %d dropped %d %s to machine %s\n", game.turn, w->id,
          m->input_buffer_count[i], material_str(m->input_buffer[i]), m->name);
 }
@@ -671,9 +671,9 @@ void worker_drop_at_stockpile(Worker *w, Stockpile *s) {
   printf("%ld: worker %d dropped %d %s at stockpile\n", game.turn, w->id,
          w->carrying_count, material_str(w->carrying));
 
-  s->contents[s->things_in_stockpile] = w->carrying;
-  s->content_count[s->things_in_stockpile] = w->carrying_count;
-  s->things_in_stockpile++;
+  s->contents[s->c_contents] = w->carrying;
+  s->contents_count[s->c_contents] = w->carrying_count;
+  s->c_contents++;
   w->carrying_count = 0;
 }
 
@@ -721,7 +721,7 @@ void tick_worker(Worker *w) {
       Stockpile *s = get_stockpile_by_id(m->output_stockpile);
       worker_drop_at_stockpile(w, s);
 
-      if (m->outputs == 0) {
+      if (m->c_output_buffer == 0) {
         w->status = W_IDLE;
         w->job = JOB_NONE;
       } else {
@@ -749,7 +749,7 @@ void tick_worker(Worker *w) {
     if (w->status == W_CARRYING) {
       // printf("DEBUG_TICK_WORKER: dropping material at machine\n");
       worker_drop_material_at_machine(w, m);
-      MaterialCount mc = next_unfullfilled_material(m, m->recipe);
+      MaterialCount mc = next_unfullfilled_material(m, m->active_recipe);
       if (mc.count > 0) { // the machine requires more materials
         int mis = material_in_stockpile(s, mc.material);
         if (mis < mc.count) { // not enough material in stockpile
@@ -769,7 +769,7 @@ void tick_worker(Worker *w) {
     } else if (w->status == W_MOVING) {
       // The worker has reached the input stockpile of the machine and will try
       // to pick up the material required.
-      MaterialCount mc = next_unfullfilled_material(m, m->recipe);
+      MaterialCount mc = next_unfullfilled_material(m, m->active_recipe);
       int mis = material_in_stockpile(s, mc.material);
 
       if (mis >= mc.count) {
@@ -794,7 +794,7 @@ void tick_worker(Worker *w) {
     }
     Machine *m = get_machine_by_id(w->job_target.id);
 
-    if (machine_has_required_inputs(m, m->recipe)) {
+    if (machine_has_required_inputs(m, m->active_recipe)) {
       w->status = W_PRODUCING;
       return;
     }

@@ -42,12 +42,15 @@ typedef enum ProductionMaterial {
 
 typedef struct Recipe {
   enum RecipeName name;
-  int i_count;
+
+  int c_inputs;
   ProductionMaterial inputs[10];
   int inputs_count[10];
-  int o_count;
+
+  int c_outputs;
   ProductionMaterial outputs[10];
   int outputs_count[10];
+
   int time;
 } Recipe;
 
@@ -56,16 +59,16 @@ enum MachineType { WIRE_WINDER, WIRE_PULLER, WIRE_CUTTER };
 typedef struct Machine {
   int id;
   char name[10];
-  enum MachineType mtype;
+  enum MachineType type;
   int job_time_left;
-  bool current_work_order;
-  Recipe recipe;
+  bool has_current_work_order;
+  Recipe active_recipe;
 
-  int inputs;
+  int c_input_buffer;
   ProductionMaterial input_buffer[10];
   int input_buffer_count[10];
 
-  int outputs;
+  int c_output_buffer;
   ProductionMaterial output_buffer[10];
   int output_buffer_count[10];
 
@@ -96,9 +99,9 @@ typedef struct Stockpile {
   Vector size;
   bool can_be_taken_from;
 
-  int things_in_stockpile;
+  int c_contents;
   ProductionMaterial contents[10];
-  int content_count[10];
+  int contents_count[10];
 
   int c_required_material;
   ProductionMaterial required_material[10];

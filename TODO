@@ -1,4 +1,3 @@
-Job queue debug
 Menu for adding things: machines, stockpile, worker
 Stocastic variation in timing
 Implement held jobs for man_machine etc.
