@@ -146,41 +146,47 @@ void draw_game_state(struct DrawState *ds) {
                (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, font_size},
                font_size, 4, BLUE);
 
-    DrawTextEx(
-        *font, "Contains",
-        (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, (font_size * 2)},
-        font_size, 4, BLUE);
+    int y_offset = 2;
 
-    int y_offset = 3;
+    if (s->things_in_stockpile > 0) {
+      DrawTextEx(
+          *font, "Contains",
+          (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, (font_size * 2)},
+          font_size, 4, BLUE);
+      y_offset++;
 
-    for (int i = 0; i < s->things_in_stockpile; i++) {
-      if (s->content_count[i] > 0) {
-        sprintf(text_buffer, "\t%s: %d", material_str(s->contents[i]),
-                s->content_count[i]);
-        DrawTextEx(*font, text_buffer,
-                   (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
-                             (font_size * y_offset)},
-                   font_size, 4, BLUE);
-        y_offset++;
+      for (int i = 0; i < s->things_in_stockpile; i++) {
+        if (s->content_count[i] > 0) {
+          sprintf(text_buffer, "\t%s: %d", material_str(s->contents[i]),
+                  s->content_count[i]);
+          DrawTextEx(*font, text_buffer,
+                     (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
+                               (font_size * y_offset)},
+                     font_size, 4, BLUE);
+          y_offset++;
+        }
       }
     }
 
-    DrawTextEx(*font, "Requires",
-               (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
-                         (font_size * y_offset)},
-               font_size, 4, BLUE);
+    if (s->c_required_material > 0) {
+      DrawTextEx(*font, "Requires",
+                 (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
+                           (font_size * y_offset)},
+                 font_size, 4, BLUE);
 
-    y_offset++;
+      y_offset++;
 
-    for (int i = 0; i < s->c_required_material; i++) {
-      if (s->required_material_count[i] > 0) {
-        sprintf(text_buffer, "\t%s: %d", material_str(s->required_material[i]),
-                s->required_material_count[i]);
-        DrawTextEx(*font, text_buffer,
-                   (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
-                             (font_size * y_offset)},
-                   font_size, 4, BLUE);
-        y_offset++;
+      for (int i = 0; i < s->c_required_material; i++) {
+        if (s->required_material_count[i] > 0) {
+          sprintf(text_buffer, "\t%s: %d",
+                  material_str(s->required_material[i]),
+                  s->required_material_count[i]);
+          DrawTextEx(*font, text_buffer,
+                     (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
+                               (font_size * y_offset)},
+                     font_size, 4, BLUE);
+          y_offset++;
+        }
       }
     }
 
