@@ -109,6 +109,7 @@ GameState *new_game(void);
 
 char *material_str(ProductionMaterial m);
 char *machine_str(enum MachineType m);
+char *recipe_str(RecipeName rn);
 
 int add_stockpile(int x, int y, int w, int h);
 void add_material_to_stockpile(int sid, ProductionMaterial p, int count);

@@ -161,6 +161,29 @@ Recipe get_recipe_from_name(RecipeName rn) {
   }
 }
 
+char *_recipe[50] = {0};
+
+char *recipe_str(RecipeName rn) {
+  switch (rn) {
+
+  case WIND_WIRE: {
+    strcpy(_recipe, "WIND_WIRE");
+    break;
+  }
+
+  case PULL_WIRE: {
+    strcpy(_recipe, "PULL_WIRE");
+    break;
+  }
+
+  case CUT_WIRE: {
+    strcpy(_recipe, "CUT_WIRE");
+    break;
+  }
+  }
+  return _recipe;
+}
+
 /* -------------
  * STOCKPILES
  * ------------- */

@@ -121,6 +121,18 @@ void draw_game_state(struct DrawState *ds) {
     DrawTextEx(*font, text_buffer,
                (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, font_size},
                font_size, 4, BLUE);
+    if (m->current_work_order) {
+      sprintf(text_buffer, "Machining batch of %s", recipe_str(m->recipe.name));
+      DrawTextEx(
+          *font, text_buffer,
+          (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, (font_size * 2)},
+          font_size, 4, BLUE);
+    } else {
+      DrawTextEx(
+          *font, "Idle",
+          (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, (font_size * 2)},
+          font_size, 4, BLUE);
+    }
     break;
   }
   case O_STOCKPILE: {
