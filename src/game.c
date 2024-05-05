@@ -162,7 +162,7 @@ const Recipe wind_wire = {.name = WIND_WIRE,
                           .o_count = 1,
                           .outputs = {SPINDLED_WIRE_COIL},
                           .outputs_count = {1},
-                          .time = 10};
+                          .time = 1};
 
 const Recipe pull_wire = {.name = PULL_WIRE,
                           .i_count = 1,
@@ -171,7 +171,7 @@ const Recipe pull_wire = {.name = PULL_WIRE,
                           .o_count = 1,
                           .outputs = {WIRE},
                           .outputs_count = {100},
-                          .time = 10};
+                          .time = 1};
 
 Recipe get_recipe_from_name(RecipeName rn) {
   switch (rn) {
@@ -674,9 +674,9 @@ void tick_worker(Worker *w) {
       Stockpile *s = get_stockpile_by_id(w->job_target.id);
       MaterialCount mc = next_replenishement_need(s);
       Stockpile *t = find_stockpile_with_material(mc);
-/*       printf("DEBUG: worker %d is replenishing stockpile %d with %d of "
-             "material %s\n",
-             w->id, s->id, mc.count, material_str(mc.material)); */
+      /*       printf("DEBUG: worker %d is replenishing stockpile %d with %d of
+         " "material %s\n", w->id, s->id, mc.count, material_str(mc.material));
+       */
       if (t) {
         w->target = t->location;
         w->status = W_MOVING;
@@ -793,8 +793,38 @@ void tick_worker(Worker *w) {
   break;
 
   case JOB_REPLENISH_STOCKPILE: {
-    printf("ERROR: Replenish job not implemented\n");
-    exit(1);
+    if (w->status == W_MOVING) {
+      Stockpile *s = get_stockpile_by_id(w->job_target.id);
+      MaterialCount need = next_replenishement_need(s);
+      Stockpile *t = find_stockpile_with_material(need);
+      if (!t) {
+        printf("ERROR: replenishing stockpile, but no longer any stockpile "
+               "available!\n");
+        exit(1);
+      } else if (!vec_equal(t->location, w->target)) {
+        printf("ERROR: replenishing stockpile, but the stockpile with the "
+               "material is no longer the one we started with\n");
+        exit(1);
+      } else {
+        int available = material_in_stockpile(t, need.material);
+        int pickup = (available < need.count) ? available : need.count; 
+        worker_pickup_from_stockpile(w, t, need.material, pickup);
+        w->target = s->location;
+        w->status = W_CARRYING;
+        w->carrying = need.material;
+        w->carrying_count = pickup;
+      }
+    } else if (w->status == W_CARRYING) {
+      worker_drop_at_stockpile(w, get_stockpile_by_id(w->job_target.id));
+      w->job = JOB_NONE;
+      w->job_target = (ObjectReference) {O_NOTHING, -1};
+      w->status = W_IDLE;
+      w->carrying = NONE;
+      w->carrying_count = 0;
+    } else {
+      printf("ERROR: replenish with job %s not implemented\n", status_str(w->status));
+      exit(1);
+    }
     break;
   }
 
