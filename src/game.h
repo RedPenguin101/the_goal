@@ -136,6 +136,7 @@ void add_required_material_to_stockpile(Stockpile *s, ProductionMaterial p,
 Stockpile *get_stockpile_by_id(int id);
 
 int add_machine(enum MachineType type, char *name, int x, int y);
+const RecipeName *possible_recipes(const Machine *m);
 void add_output_stockpile_to_machine(int machine_id, int stockpile_id);
 void add_input_stockpile_to_machine(int machine_id, int stockpile_id);
 Machine *get_machine_by_id(int id);

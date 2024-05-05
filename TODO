@@ -4,3 +4,4 @@ Implement held jobs for man_machine etc.
 Walls and pathfinding for workers
 Set up room two of factory: pulling lengths, 2x cutting stations, 1x point grinding station
 Limit the recipes that a machine can work on.
+Run through all functions and see what input/output values can/should be made const.

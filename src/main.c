@@ -243,22 +243,11 @@ void handle_input(GameState *gs) {
   ObjectReference o = object_under_point(gs->cursor.x, gs->cursor.y);
   if (o.object_type == O_MACHINE) {
     if (IsKeyPressed(KEY_A)) {
-      // @HACK, this is game logic, shouldn't be here.
-      // possible jobs should be part of machine definition
       Machine *m = get_machine_by_id(o.id);
-      RecipeName r;
-      switch (m->type) {
-      case WIRE_PULLER:
-        r = PULL_WIRE;
-        break;
-
-      case WIRE_WINDER:
-        r = WIND_WIRE;
-        break;
-
-      default:
-        break;
-      }
+      const RecipeName *rs = possible_recipes(m);
+      // @IMPROVE: currently this just takes the first thing
+      // should be able to pick any possible recipe
+      RecipeName r = *rs;
       assign_machine_production_job(o.id, r);
     }
   }

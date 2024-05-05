@@ -352,6 +352,30 @@ char *machine_str(enum MachineType m) {
   return _machine;
 }
 
+const RecipeName wire_winder_recipes[2] = {WIND_WIRE, -1};
+const RecipeName wire_cutter_recipes[2] = {CUT_WIRE, -1};
+const RecipeName wire_puller_recipes[2] = {PULL_WIRE, -1};
+
+const RecipeName *possible_recipes(const Machine *m) {
+  switch (m->type) {
+
+  case WIRE_WINDER: {
+    return wire_winder_recipes;
+  }
+  case WIRE_PULLER: {
+    return wire_puller_recipes;
+  }
+
+  case WIRE_CUTTER: {
+    return wire_cutter_recipes;
+  }
+
+  default:
+    printf("ERROR: Unrecognized machine type\n");
+    exit(1);
+  }
+}
+
 int add_machine(enum MachineType type, char *name, int x, int y) {
   int id = game.c_machines;
 
