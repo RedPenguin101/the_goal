@@ -5,7 +5,8 @@
 #define MAX_X 15
 #define MAX_Y 15
 #define SQUARE_SIZE 30
-#define SCREEN_WIDTH (MAX_X * SQUARE_SIZE)
+#define MENU_SIZE_SQUARES 30
+#define SCREEN_WIDTH ((MAX_X + MENU_SIZE_SQUARES) * SQUARE_SIZE)
 #define SCREEN_HEIGHT (MAX_Y * SQUARE_SIZE)
 #define TEXT_SIZE 15
 
@@ -229,7 +230,7 @@ int main(void) {
   assign_machine_production_job(winder, WIND_WIRE);
   // assign_machine_production_job(puller, PULL_WIRE);
 
-  InitWindow(SCREEN_WIDTH * 2, SCREEN_HEIGHT, "THE_GOAL");
+  InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "THE_GOAL");
   Font font = LoadFont("assets/romulus.png");
   Texture2D ascii = LoadTexture("assets/16x16-RogueYun-AgmEdit.png");
   ds.font = &font;

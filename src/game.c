@@ -161,7 +161,7 @@ Recipe get_recipe_from_name(RecipeName rn) {
   }
 }
 
-char *_recipe[50] = {0};
+char _recipe[50] = {0};
 
 char *recipe_str(RecipeName rn) {
   switch (rn) {
