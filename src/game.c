@@ -674,9 +674,9 @@ void tick_worker(Worker *w) {
       Stockpile *s = get_stockpile_by_id(w->job_target.id);
       MaterialCount mc = next_replenishement_need(s);
       Stockpile *t = find_stockpile_with_material(mc);
-      printf("DEBUG: worker %d is replenishing stockpile %d with %d of "
+/*       printf("DEBUG: worker %d is replenishing stockpile %d with %d of "
              "material %s\n",
-             w->id, s->id, mc.count, material_str(mc.material));
+             w->id, s->id, mc.count, material_str(mc.material)); */
       if (t) {
         w->target = t->location;
         w->status = W_MOVING;
