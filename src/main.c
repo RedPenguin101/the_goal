@@ -230,6 +230,12 @@ void handle_input(GameState *gs) {
   if (IsKeyPressed(KEY_DOWN) && (gs->cursor.y < MAX_Y)) {
     gs->cursor.y++;
   }
+  if (IsKeyPressed(KEY_Q)) {
+    quit = true;
+  }
+  if (IsKeyPressed(KEY_J)) {
+    debug_print_job_queue();
+  }
   if (IsKeyPressed(KEY_P)) {
     paused = !paused;
   }

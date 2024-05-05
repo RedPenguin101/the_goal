@@ -127,13 +127,28 @@ void enqueue_job(ObjectReference o, enum Job job) {
 
 bool jobs_on_queue(void) { return job_queue_tail != job_queue_head; }
 
-// @BUG: Actually this won't work because the job could be assigned to the
-// worker.
+void debug_print_job_queue(void) {
+  if (jobs_on_queue()) {
+    printf("JOB QUEUE:\n");
+    for (int i = job_queue_head; i < job_queue_tail; i++) {
+      printf("\t%2d: %s\n", i, job_str(job_queue[i].job));
+    }
+  } else {
+    printf("NO jobs on queue\n");
+  }
+}
+
 bool outstanding_replenishment_order(int stockpile_id) {
-  for (int i = 0; i < MAX_JOB_QUEUE; i++) {
+  for (int i = job_queue_head; i < job_queue_tail; i++) {
     if (job_queue[i].job == JOB_REPLENISH_STOCKPILE &&
         job_queue[i].object.id == stockpile_id)
       return true;
+  }
+  for (int i = 0; i < game.c_workers; i++) {
+    if (game.workers[i].job == JOB_REPLENISH_STOCKPILE &&
+        game.workers[i].job_target.id == stockpile_id) {
+      return true;
+    }
   }
   return false;
 }
@@ -807,7 +822,7 @@ void tick_worker(Worker *w) {
         exit(1);
       } else {
         int available = material_in_stockpile(t, need.material);
-        int pickup = (available < need.count) ? available : need.count; 
+        int pickup = (available < need.count) ? available : need.count;
         worker_pickup_from_stockpile(w, t, need.material, pickup);
         w->target = s->location;
         w->status = W_CARRYING;
@@ -817,12 +832,13 @@ void tick_worker(Worker *w) {
     } else if (w->status == W_CARRYING) {
       worker_drop_at_stockpile(w, get_stockpile_by_id(w->job_target.id));
       w->job = JOB_NONE;
-      w->job_target = (ObjectReference) {O_NOTHING, -1};
+      w->job_target = (ObjectReference){O_NOTHING, -1};
       w->status = W_IDLE;
       w->carrying = NONE;
       w->carrying_count = 0;
     } else {
-      printf("ERROR: replenish with job %s not implemented\n", status_str(w->status));
+      printf("ERROR: replenish with job %s not implemented\n",
+             status_str(w->status));
       exit(1);
     }
     break;
@@ -888,8 +904,8 @@ void tick_game(void) {
 
   if (jobs_on_queue()) {
     int idle_worker = first_idle_worker();
-    printf("DEBUG_TICK_GAME: First Idle Worker is %d\n", idle_worker);
-    print_worker(get_worker_by_id(0));
+    // printf("DEBUG_TICK_GAME: First Idle Worker is %d\n", idle_worker);
+    // print_worker(get_worker_by_id(0));
 
     while (idle_worker >= 0 && jobs_on_queue()) {
       worker_take_job(idle_worker, pop_job());

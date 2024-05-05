@@ -1,32 +1,7 @@
-
-Message list cycle
-Menu:
-        adding machines
-        adding stockpiles
-        adding workers
-
+Job queue debug
+Menu for adding things: machines, stockpile, worker
 Stocastic variation in timing
-
-hover menus
-
-Second worker
-
-Handling of 'held' jobs
+Implement held jobs for man_machine etc.
 Walls and pathfinding for workers
-
 Set up room two of factory: pulling lengths, 2x cutting stations, 1x point grinding station
-BUG: Workers always revert to their previous position after wandering
-selection and target menu
-Display what a machine is working on.
 Limit the recipes that a machine can work on.
-Add an order to a workshop
-
-Job / implementation for moving inventory from one stockpile to another
-REPLENISH ORDER
-A stockpile has a 'replenishment threshold' for any material that is needed.
-If the inventory in that stockpile falls below that threshold, a replenishment job is created
-The replenishment job causes a worker to find the required material in another stockpile and move it to the target stockpile.
-
-If workers pick up a job but can't complete it, they should idle.
-
-Pause on pressing P
