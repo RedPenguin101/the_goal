@@ -6,4 +6,5 @@ Set up room two of factory: pulling lengths, 2x cutting stations, 1x point grind
 Run through all functions and see what input/output values can/should be made const.
 Limit jobs workers can do.
 Factory input and output nodes.
-Idle workers go to [max x, 0]
+BUG: item not being put in existing stockpile location
+BUG: stockpile graphic doesn't wrap

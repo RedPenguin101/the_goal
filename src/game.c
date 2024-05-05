@@ -183,9 +183,9 @@ const Recipe pull_wire = {.name = PULL_WIRE,
                           .c_inputs = 1,
                           .inputs = {SPINDLED_WIRE_COIL},
                           .inputs_count = {1},
-                          .c_outputs = 1,
-                          .outputs = {WIRE},
-                          .outputs_count = {100},
+                          .c_outputs = 2,
+                          .outputs = {WIRE, EMPTY_SPINDLE},
+                          .outputs_count = {100, 1},
                           .time = 1};
 
 Recipe get_recipe_from_name(RecipeName rn) {
@@ -303,25 +303,37 @@ MaterialCount next_replenishement_need(Stockpile *s) {
   return (MaterialCount){NONE, -1};
 }
 
+int index_of_material_in_stockpile(const Stockpile *s, ProductionMaterial p) {
+  for (int i = 0; i < s->c_contents; i++) {
+    if (s->contents[i] == p) {
+      return i;
+    }
+  }
+  return -1;
+}
+
 void remove_material_from_stockpile(Stockpile *s, ProductionMaterial p,
-                                    int count) {
-  int mis = material_in_stockpile(s, p);
-  if (mis < count) {
+                                    int amount_to_remove) {
+  int idx = index_of_material_in_stockpile(s, p);
+  if (idx == -1) {
+    printf("ERROR: Material is not in stockpile");
+    exit(1);
+  }
+  int available = s->contents_count[idx];
+
+  if (available < amount_to_remove) {
     printf("ERROR: Not enough material in stockpile to remove");
     exit(1);
   }
 
-  int remaining = count;
-  for (int i = 0; i < s->c_contents; i++) {
-    if (s->contents[i] == p) {
-      int available = s->contents_count[i];
-      int to_remove = (available > remaining) ? remaining : available;
-      remaining -= to_remove;
-      s->contents_count[i] -= to_remove;
+  s->contents_count[idx] -= amount_to_remove;
+
+  if (s->contents_count[idx] == 0) {
+    for (int i = idx; i < s->c_contents; i++) {
+      s->contents[i] = s->contents[i + 1];
+      s->contents_count[i] = s->contents_count[i + 1];
     }
-    if (remaining == 0) {
-      return;
-    }
+    s->c_contents--;
   }
 }
 

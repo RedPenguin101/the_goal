@@ -118,24 +118,29 @@ void draw_game_state(struct DrawState *ds) {
     break;
   }
   case O_MACHINE: {
+    int y_offset = 1;
     // printf("DEBUG: Machine under cursor\n");
     Machine *m = get_machine_by_id(o.id);
     sprintf(text_buffer, "%s machine %d", machine_str(m->type), m->id);
     DrawTextEx(*font, text_buffer,
-               (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, font_size},
+               (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
+                         (font_size * y_offset)},
                font_size, 4, BLUE);
+    y_offset++;
+
     if (m->has_current_work_order) {
       sprintf(text_buffer, "Machining batch of %s",
               recipe_str(m->active_recipe.name));
-      DrawTextEx(
-          *font, text_buffer,
-          (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, (font_size * 2)},
-          font_size, 4, BLUE);
+      DrawTextEx(*font, text_buffer,
+                 (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
+                           (font_size * y_offset)},
+                 font_size, 4, BLUE);
+      y_offset++;
     } else {
-      DrawTextEx(
-          *font, "Idle",
-          (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, (font_size * 2)},
-          font_size, 4, BLUE);
+      DrawTextEx(*font, "Idle",
+                 (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
+                           (font_size * y_offset)},
+                 font_size, 4, BLUE);
     }
 
     DrawTextEx(*font, "a) add job",
@@ -271,12 +276,17 @@ int main(void) {
     exit(1);
   }
 
+  // int input_doc = add_stockpile(0, 10, 3, 3);
+  // int output_doc = add_stockpile(14, 3, 2, 2);
+
   // Winder machine
   int in = add_stockpile(2, 2, 2, 2);
   Stockpile *s_in = get_stockpile_by_id(in);
-  int out = add_stockpile(2, 6, 3, 3);
+  int out = add_stockpile(2, 6, 2, 2);
   Stockpile *s_out = get_stockpile_by_id(out);
   s_out->can_be_taken_from = true;
+
+  add_required_material_to_stockpile(s_in, EMPTY_SPINDLE, 1);
   add_material_to_stockpile(s_in, WASHED_IRON_WIRE_COIL, 1);
   add_material_to_stockpile(s_in, EMPTY_SPINDLE, 1);
 
@@ -298,6 +308,7 @@ int main(void) {
   add_output_stockpile_to_machine(puller, out);
   add_input_stockpile_to_machine(puller, in);
 
+  add_worker();
   add_worker();
   add_worker();
   assign_machine_production_job(winder, WIND_WIRE);
