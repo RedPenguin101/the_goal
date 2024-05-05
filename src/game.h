@@ -70,7 +70,7 @@ typedef struct Machine {
   int input_stockpile;
 } Machine;
 
-enum WorkerStatus { W_IDLE, W_CARRYING, W_MOVING, W_PRODUCING };
+enum WorkerStatus { W_IDLE, W_CANT_PROCEED, W_CARRYING, W_MOVING, W_PRODUCING };
 
 typedef struct Worker {
   int id;

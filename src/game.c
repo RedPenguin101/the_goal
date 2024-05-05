@@ -426,6 +426,11 @@ char *status_str(enum WorkerStatus s) {
     break;
   }
 
+  case W_CANT_PROCEED: {
+    strcpy(_status, "W_CANT_PROCEED");
+    break;
+  }
+
   case W_CARRYING: {
     strcpy(_status, "W_CARRYING");
     break;
@@ -572,6 +577,16 @@ void worker_drop_at_stockpile(Worker *w, Stockpile *s) {
 }
 
 void tick_worker(Worker *w) {
+  if (w->status == W_CANT_PROCEED) {
+    // if the worker is in the 'stuck' status, they should check if they can now
+    // complete the assigned job. If circumstances have changed, they should
+    // continue with their intended task. Otherwise they should continue to
+    // hold.
+
+    w->location = vec_move_random(w->location, 20);
+    return;
+  }
+
   if (!vec_equal(w->location, w->target)) {
     w->location = vec_move_towards(w->location, w->target);
     return;
@@ -631,10 +646,19 @@ void tick_worker(Worker *w) {
         w->status = W_PRODUCING;
       }
     } else if (w->status == W_MOVING) {
+      // The worker has reached the input stockpile of the machine and will try
+      // to pick up the material required.
       MaterialCount mc = next_unfullfilled_material(m, m->recipe);
-      worker_pickup_from_stockpile(w, s, mc.material, mc.count);
-      w->target = m->location;
-      w->status = W_CARRYING;
+      int mis = material_in_stockpile(s, mc.material);
+
+      if (mis >= mc.count) {
+        worker_pickup_from_stockpile(w, s, mc.material, mc.count);
+        w->target = m->location;
+        w->status = W_CARRYING;
+      } else {
+        printf("DEBUG: Worker tried to pick up material from stockpile, but there wasn't enough in it.\n");
+        w->status = W_CANT_PROCEED;
+      }
     } else {
       printf("ERROR: Unhandled worker status %d for fill input buffer job\n",
              w->status);
