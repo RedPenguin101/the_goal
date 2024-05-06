@@ -279,7 +279,7 @@ int main(void) {
   // int input_doc = add_stockpile(0, 10, 3, 3);
   // int output_doc = add_stockpile(14, 3, 2, 2);
 
-  // Winder machine
+  // WINDER machine
   int in = add_stockpile(2, 2, 2, 2);
   Stockpile *s_in = get_stockpile_by_id(in);
   int out = add_stockpile(2, 6, 2, 2);
@@ -294,7 +294,7 @@ int main(void) {
   add_output_stockpile_to_machine(winder, out);
   add_input_stockpile_to_machine(winder, in);
 
-  // Puller machine
+  // PULLER machine
   out = add_stockpile(11, 10, 3, 3);
   s_out = get_stockpile_by_id(out);
   s_out->can_be_taken_from = true;
@@ -308,6 +308,21 @@ int main(void) {
   add_output_stockpile_to_machine(puller, out);
   add_input_stockpile_to_machine(puller, in);
 
+  // CUTTER machine
+  int cutter = add_machine(WIRE_CUTTER, "WireCut", 12, 3);
+  out = add_stockpile(12, 5, 2, 2);
+  s_out = get_stockpile_by_id(out);
+  s_out->can_be_taken_from = true;
+
+  in = add_stockpile(10, 3, 2, 2);
+  s_in = get_stockpile_by_id(in);
+  add_required_material_to_stockpile(s_in, LONG_WIRES, 50);
+  add_material_to_stockpile(s_in, SMALL_BOWL, 5);
+
+  add_output_stockpile_to_machine(cutter, out);
+  add_input_stockpile_to_machine(cutter, in);
+
+  add_worker();
   add_worker();
   add_worker();
   add_worker();

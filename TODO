@@ -3,8 +3,11 @@ Stocastic variation in timing
 Implement held jobs for man_machine etc.
 Walls and pathfinding for workers
 Set up room two of factory: pulling lengths, 2x cutting stations, 1x point grinding station
-Run through all functions and see what input/output values can/should be made const.
 Limit jobs workers can do.
 Factory input and output nodes.
 BUG: item not being put in existing stockpile location
 BUG: stockpile graphic doesn't wrap
+Add size to factory (grind / cut is 1x1)
+If can't replenish, find another job to do (put the job back on the queue)
+Workers should empty their own output buffer when they're finished 
+Implement cut wire job

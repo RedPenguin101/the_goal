@@ -58,8 +58,23 @@ char *material_str(ProductionMaterial m) {
     break;
   }
 
-  case WIRE: {
+  case LONG_WIRES: {
     strcpy(_material, "WIRE");
+    break;
+  }
+
+  case SMALL_BOWL: {
+    strcpy(_material, "SMALL_BOWL");
+    break;
+  }
+
+  case BOWL_OF_SHORT_WIRES: {
+    strcpy(_material, "BOWL_OF_SHORT_WIRES");
+    break;
+  }
+
+  case BOWL_OF_HEADLESS_PINS: {
+    strcpy(_material, "BOWL_OF_HEADLESS_PINS");
     break;
   }
   }
@@ -184,9 +199,27 @@ const Recipe pull_wire = {.name = PULL_WIRE,
                           .inputs = {SPINDLED_WIRE_COIL},
                           .inputs_count = {1},
                           .c_outputs = 2,
-                          .outputs = {WIRE, EMPTY_SPINDLE},
+                          .outputs = {LONG_WIRES, EMPTY_SPINDLE},
                           .outputs_count = {100, 1},
                           .time = 1};
+
+const Recipe cut_wire = {.name = CUT_WIRE,
+                         .c_inputs = 2,
+                         .inputs = {LONG_WIRES, SMALL_BOWL},
+                         .inputs_count = {10, 1},
+                         .c_outputs = 1,
+                         .outputs = {BOWL_OF_SHORT_WIRES},
+                         .outputs_count = {1, 1},
+                         .time = 1};
+
+const Recipe grind_point = {.name = GRIND_POINT,
+                            .c_inputs = 1,
+                            .inputs = {BOWL_OF_SHORT_WIRES},
+                            .inputs_count = {1},
+                            .c_outputs = 1,
+                            .outputs = {BOWL_OF_HEADLESS_PINS},
+                            .outputs_count = {1},
+                            .time = 1};
 
 Recipe get_recipe_from_name(RecipeName rn) {
   switch (rn) {
@@ -195,8 +228,9 @@ Recipe get_recipe_from_name(RecipeName rn) {
   case WIND_WIRE:
     return wind_wire;
   case CUT_WIRE:
-    printf("CUT_WIRE recipe not implemented\n");
-    exit(1);
+    return cut_wire;
+  case GRIND_POINT:
+    return grind_point;
   default:
     printf("Unknown recipe %d\n", rn);
     exit(1);
@@ -220,6 +254,11 @@ char *recipe_str(RecipeName rn) {
 
   case CUT_WIRE: {
     strcpy(_recipe, "CUT_WIRE");
+    break;
+  }
+
+  case GRIND_POINT: {
+    strcpy(_recipe, "GRIND_POINT");
     break;
   }
   }

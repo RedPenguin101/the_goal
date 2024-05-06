@@ -30,6 +30,7 @@ typedef enum RecipeName {
   WIND_WIRE,
   PULL_WIRE,
   CUT_WIRE,
+  GRIND_POINT
 } RecipeName;
 
 typedef enum ProductionMaterial {
@@ -37,7 +38,10 @@ typedef enum ProductionMaterial {
   WASHED_IRON_WIRE_COIL,
   EMPTY_SPINDLE,
   SPINDLED_WIRE_COIL,
-  WIRE
+  LONG_WIRES,
+  SMALL_BOWL,
+  BOWL_OF_SHORT_WIRES,
+  BOWL_OF_HEADLESS_PINS
 } ProductionMaterial;
 
 typedef struct Recipe {
