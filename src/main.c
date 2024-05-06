@@ -325,7 +325,6 @@ int main(void) {
   add_worker();
   add_worker();
   add_worker();
-  add_worker();
   assign_machine_production_job(winder, WIND_WIRE);
   // assign_machine_production_job(puller, PULL_WIRE);
 

@@ -399,6 +399,11 @@ char *machine_str(enum MachineType m) {
     strcpy(_machine, "WIRE_CUTTER");
     break;
   }
+
+  case WIRE_GRINDER: {
+    strcpy(_machine, "WIRE_GRINDER");
+    break;
+  }
   }
   return _machine;
 }
@@ -440,8 +445,14 @@ int add_machine(enum MachineType type, char *name, int x, int y) {
     exit(1);
   }
 
-  Vector v = {2, 2};
+  Vector v;
   switch (type) {
+  case WIRE_PULLER:
+    v = (Vector){2, 2};
+    break;
+  case WIRE_WINDER:
+    v = (Vector){2, 2};
+    break;
   case WIRE_GRINDER:
     v = (Vector){1, 1};
     break;
@@ -494,9 +505,6 @@ void assign_machine_production_job(int id, RecipeName rn) {
 
 void complete_production(Machine *m) {
   Worker *w = get_worker_by_id(m->worker);
-  w->status = W_IDLE;
-  w->job = JOB_NONE;
-  w->target = (Vector){15, 0};
 
   int num_outputs = m->active_recipe.c_outputs;
   m->has_current_work_order = false;
@@ -508,7 +516,10 @@ void complete_production(Machine *m) {
     m->output_buffer_count[i] = m->active_recipe.outputs_count[i];
   }
 
-  enqueue_job((ObjectReference){O_MACHINE, m->id}, JOB_EMPTY_OUTPUT_BUFFER);
+  w->status = W_MOVING;
+  w->job = JOB_EMPTY_OUTPUT_BUFFER;
+  w->job_target = (ObjectReference){O_MACHINE, m->id};
+  w->target = m->location;
 }
 
 int machine_has_input(Machine *m, ProductionMaterial p) {
