@@ -58,7 +58,7 @@ typedef struct Recipe {
   int time;
 } Recipe;
 
-enum MachineType { WIRE_WINDER, WIRE_PULLER, WIRE_CUTTER };
+enum MachineType { WIRE_WINDER, WIRE_PULLER, WIRE_CUTTER, WIRE_GRINDER };
 
 typedef struct Machine {
   int id;

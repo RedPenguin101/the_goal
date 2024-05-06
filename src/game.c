@@ -440,6 +440,16 @@ int add_machine(enum MachineType type, char *name, int x, int y) {
     exit(1);
   }
 
+  Vector v = {2, 2};
+  switch (type) {
+  case WIRE_GRINDER:
+    v = (Vector){1, 1};
+    break;
+  case WIRE_CUTTER:
+    v = (Vector){1, 1};
+    break;
+  }
+
   game.machines[id] = (Machine){
       .id = id,
       .name = {0},
@@ -449,7 +459,7 @@ int add_machine(enum MachineType type, char *name, int x, int y) {
       .c_output_buffer = 0,
       .worker = -1,
       .location = (Vector){x, y},
-      .size = (Vector){2, 2},
+      .size = v,
       .output_stockpile = -1,
   };
 

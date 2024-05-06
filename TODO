@@ -7,7 +7,8 @@ Limit jobs workers can do.
 Factory input and output nodes.
 BUG: item not being put in existing stockpile location
 BUG: stockpile graphic doesn't wrap
-Add size to factory (grind / cut is 1x1)
 If can't replenish, find another job to do (put the job back on the queue)
 Workers should empty their own output buffer when they're finished 
 Implement cut wire job
+Do ... something when fulfill input can't be done. Maybe just go idle
+Hover on worker to cancel current order (put back to queue)
