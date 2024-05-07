@@ -86,6 +86,7 @@ char *material_str(ProductionMaterial m) {
  * ------------- */
 
 #define MAX_JOB_QUEUE 100
+#define MAX_REPLENISHMENT_QUEUE 100
 
 int job_queue_head = 0;
 int job_queue_tail = 0;
@@ -140,6 +141,43 @@ void enqueue_job(ObjectReference o, enum Job job) {
   }
 }
 
+struct ReplenishQueueItem {
+  ObjectReference object;
+  ProductionMaterial pm;
+  int count;
+} replenishment_queue[MAX_REPLENISHMENT_QUEUE];
+
+void enqueue_replenishment(ObjectReference o, ProductionMaterial pm,
+                           int count) {
+  for (int i = 0; i < MAX_REPLENISHMENT_QUEUE; i++) {
+    ObjectReference co = replenishment_queue[i].object;
+    if (co.object_type == O_NOTHING) {
+      replenishment_queue[i].object = o;
+      replenishment_queue[i].pm = pm;
+      replenishment_queue[i].count = count;
+      return;
+    }
+  }
+  printf("ERROR: No empty replenishment queue slots.\n");
+  exit(1);
+}
+
+bool outstanding_replenishment_order(int stockpile_id) {
+  for (int i = 0; i < game.c_workers; i++) {
+    if (game.workers[i].job == JOB_REPLENISH_STOCKPILE &&
+        game.workers[i].job_target.id == stockpile_id) {
+      return true;
+    }
+  }
+
+  for (int i = 0; i < MAX_REPLENISHMENT_QUEUE; i++) {
+    ObjectReference co = replenishment_queue[i].object;
+    if (co.id == stockpile_id) return true;
+  }
+  
+  return false;
+}
+
 bool jobs_on_queue(void) { return job_queue_tail != job_queue_head; }
 
 void debug_print_job_queue(void) {
@@ -151,21 +189,6 @@ void debug_print_job_queue(void) {
   } else {
     printf("NO jobs on queue\n");
   }
-}
-
-bool outstanding_replenishment_order(int stockpile_id) {
-  for (int i = job_queue_head; i < job_queue_tail; i++) {
-    if (job_queue[i].job == JOB_REPLENISH_STOCKPILE &&
-        job_queue[i].object.id == stockpile_id)
-      return true;
-  }
-  for (int i = 0; i < game.c_workers; i++) {
-    if (game.workers[i].job == JOB_REPLENISH_STOCKPILE &&
-        game.workers[i].job_target.id == stockpile_id) {
-      return true;
-    }
-  }
-  return false;
 }
 
 struct JobQueueItem pop_job(void) {
@@ -986,8 +1009,11 @@ ObjectReference object_under_point(int x, int y) {
 }
 
 void tick_game(void) {
+  // check stockpiles for missing materials and, if necessary issue
+  // replenishment order
   for (int i = 0; i < game.c_stockpile; i++) {
     Stockpile s = game.stockpiles[i];
+
     // printf("%d outstanding repl order? %d\n", s.id,
     // outstanding_replenishment_order(s.id));
     if (!outstanding_replenishment_order(s.id)) {
@@ -995,12 +1021,17 @@ void tick_game(void) {
       if (need.material != NONE) {
         printf("DEBUG: Stockpile %d needs material %s\n", s.id,
                material_str(need.material));
-        enqueue_job((ObjectReference){O_STOCKPILE, s.id},
-                    JOB_REPLENISH_STOCKPILE);
+
+        enqueue_replenishment((ObjectReference){O_STOCKPILE, s.id},
+                              need.material, need.count);
       }
     }
   }
 
+  // take replenishment jobs
+  
+
+  // take other jobs
   if (jobs_on_queue()) {
     int idle_worker = first_idle_worker();
     // printf("DEBUG_TICK_GAME: First Idle Worker is %d\n", idle_worker);
