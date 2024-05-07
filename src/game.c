@@ -541,7 +541,7 @@ void tick_machine(Machine *m) {
     } else {
       complete_production(m);
 
-      printf("DEBUG_%ld: Machine %s produced output: ", game.turn, m->name);
+      printf("DEBUG: Machine %s produced output: ", m->name);
 
       for (int i = 0; i < m->c_output_buffer; i++)
         printf("%s: %d\n", material_str(m->output_buffer[i]),
@@ -639,8 +639,8 @@ void worker_take_job(int worker_id, struct JobQueueItem jq) {
     w->job_target = jq.object;
     w->status = W_MOVING;
 
-    printf("DEBUG_WORKER_TAKE_JOB: worker %d took job to to man machine %s\n",
-           worker_id, m->name);
+    printf("DEBUG: worker %d took job to to man machine %s\n", worker_id,
+           m->name);
     sprintf(mb, "%ld: assigning worker %d to man machine %s\n", game.turn,
             worker_id, m->name);
     add_message(mb);
@@ -654,8 +654,8 @@ void worker_take_job(int worker_id, struct JobQueueItem jq) {
     w->job = jq.job;
     sprintf(mb, "%ld: assigning worker %d to empty machine %s\n", game.turn,
             worker_id, m->name);
-    printf("DEBUG_WORKER_TAKE_JOB: worker %d took job to empty machine %s\n",
-           worker_id, m->name);
+    printf("DEBUG: worker %d took job to empty machine %s\n", worker_id,
+           m->name);
     add_message(mb);
     break;
   }
@@ -694,15 +694,15 @@ void worker_drop_material_at_machine(Worker *w, Machine *m) {
   w->carrying_count = 0;
 
   m->c_input_buffer++;
-  printf("DEBUG_%ld: worker %d dropped %d %s to machine %s\n", game.turn, w->id,
+  printf("DEBUG: worker %d dropped %d %s to machine %s\n", w->id,
          m->input_buffer_count[i], material_str(m->input_buffer[i]), m->name);
 }
 
 void worker_pickup_from_stockpile(Worker *w, Stockpile *s, ProductionMaterial p,
                                   int count) {
   int mis = material_in_stockpile(s, p);
-  printf("DEBUG_%ld: getting %d %s from stockpile. There is %d\n", game.turn,
-         count, material_str(p), mis);
+  printf("DEBUG: getting %d %s from stockpile. There is %d\n", count,
+         material_str(p), mis);
   // printf("DEBUG: %d\n", m->output_buffer[0]);
 
   if (mis < count) {
@@ -712,8 +712,8 @@ void worker_pickup_from_stockpile(Worker *w, Stockpile *s, ProductionMaterial p,
     w->carrying_count = count;
     w->carrying = p;
     remove_material_from_stockpile(s, p, count);
-    printf("DEBUG_%ld: picked up %d %s from stockpile. There are %d left\n",
-           game.turn, count, material_str(p), material_in_stockpile(s, p));
+    printf("DEBUG: picked up %d %s from stockpile. There are %d left\n", count,
+           material_str(p), material_in_stockpile(s, p));
   }
 }
 
@@ -798,7 +798,7 @@ void tick_worker(Worker *w) {
         w->status = W_MOVING;
         w->target = s->location;
       } else { // machine has what it needs
-        printf("DEBUG_TICK_WORKER: Machine has what it needs, switching to "
+        printf("DEBUG: Machine has what it needs, switching to "
                "producing\n");
         m->worker = w->id;
         w->job = JOB_MAN_MACHINE;
