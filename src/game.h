@@ -131,7 +131,7 @@ char *material_str(ProductionMaterial m);
 char *machine_str(enum MachineType m);
 char *recipe_str(RecipeName rn);
 char *job_str(enum Job j);
-void debug_print_job_queue();
+void debug_print_job_queue(void);
 
 int add_stockpile(int x, int y, int w, int h);
 void add_material_to_stockpile(Stockpile *s, ProductionMaterial p, int count);

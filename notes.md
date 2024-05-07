@@ -214,3 +214,18 @@ If the worker is at the destination:
             set the status to moving
             set the target to the machine's input buffer.
 ```
+
+## Replenishment orders
+
+* Every turn, each stockpile should check what required materials it
+  is short of.
+* It should compare that list to the list of outstanding replenishment
+  orders - including the ones that are marked as in progress.
+* If the quantity of the of the shortfall of material is less than the
+  outstanding replenishment material for that order, add a
+  replenishment order for the difference
+
+* Every turn, idle workers should check try to find a replenishment
+  order that can be fulfilled - even partially.
+* If they find one, take the job to move the materials.
+* Mark the order with 
