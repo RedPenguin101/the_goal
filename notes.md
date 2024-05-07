@@ -228,4 +228,7 @@ If the worker is at the destination:
 * Every turn, idle workers should check try to find a replenishment
   order that can be fulfilled - even partially.
 * If they find one, take the job to move the materials.
-* Mark the order with 
+* Mark the order with the approriate 'in-train' amount, and reduce the amount
+* Go to the source stockpile and move the items to the target
+* Reduce the replenishment order's amount_ordered by the amount delivered
+* 

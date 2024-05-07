@@ -91,6 +91,8 @@ typedef struct Worker {
   enum WorkerStatus status;
   Vector location;
   Vector target;
+  ProductionMaterial target_material;
+  int target_count;
   enum Job job;
   ObjectReference job_target;
   ProductionMaterial carrying;

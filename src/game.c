@@ -1,4 +1,5 @@
 #include "game.h"
+#include <stdio.h>
 #include <string.h>
 
 GameState game = {0};
@@ -34,6 +35,7 @@ typedef struct MaterialCount {
 } MaterialCount;
 
 Stockpile *find_stockpile_with_material(MaterialCount mc);
+int material_in_stockpile(Stockpile const *s, ProductionMaterial p);
 
 char _material[50] = {0};
 
@@ -88,7 +90,6 @@ char *material_str(ProductionMaterial m) {
  * ------------- */
 
 #define MAX_JOB_QUEUE 100
-#define MAX_REPLENISHMENT_QUEUE 100
 
 int job_queue_head = 0;
 int job_queue_tail = 0;
@@ -167,6 +168,62 @@ struct JobQueueItem pop_job(void) {
     job_queue_head++;
   }
   return j;
+}
+
+/* -------------
+ * REPLENISHMENT
+ * ------------- */
+
+#define MAX_REPLENISHMENT_QUEUE 100
+
+struct ReplenishmentOrder {
+  int ordering_stockpile;
+  ProductionMaterial material;
+  int amount_ordered;
+  int amount_in_transit;
+} replenishment_order_queue[MAX_REPLENISHMENT_QUEUE];
+
+struct ReplenishmentOrder *get_replenishment_order(int id) {
+  return &replenishment_order_queue[id];
+}
+
+int fillable_replenishment_order(void) {
+  struct ReplenishmentOrder ro;
+  for (int i = 0; i < MAX_REPLENISHMENT_QUEUE; i++) {
+    ro = replenishment_order_queue[i];
+    if (ro.amount_ordered >= ro.amount_in_transit &&
+        find_stockpile_with_material((MaterialCount){ro.material, 1})) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+void enqueue_replenishment_order(int stockpile_id, ProductionMaterial pm,
+                                 int amount) {
+  for (int i = 0; i < MAX_REPLENISHMENT_QUEUE; i++) {
+    if (replenishment_order_queue[i].material == NONE) {
+      replenishment_order_queue[i].ordering_stockpile = stockpile_id;
+      replenishment_order_queue[i].material = pm;
+      replenishment_order_queue[i].amount_ordered = amount;
+      replenishment_order_queue[i].amount_in_transit = 0;
+      return;
+    }
+  }
+  printf("ERROR: Couldn't find a space to put replenishment order\n");
+  exit(1);
+}
+
+int outstanding_replenishment_orders(int stockpile_id, ProductionMaterial pm) {
+  int amount = 0;
+  struct ReplenishmentOrder ro;
+  for (int i = 0; i < MAX_REPLENISHMENT_QUEUE; i++) {
+    ro = replenishment_order_queue[i];
+    if (ro.ordering_stockpile == stockpile_id && ro.material == pm) {
+      amount += ro.amount_ordered - ro.amount_in_transit;
+    }
+  }
+  return amount;
 }
 
 /* -------------
@@ -303,6 +360,27 @@ int material_in_stockpile(Stockpile const *s, ProductionMaterial p) {
     }
   }
   return count;
+}
+
+void update_replenishment_orders(Stockpile *s) {
+  ProductionMaterial pm;
+  int required;
+  int current;
+  int in_queue;
+  int shortfall;
+  for (int i = 0; i < s->c_required_material; i++) {
+    pm = s->required_material[i];
+    required = s->required_material_count[i];
+    current = material_in_stockpile(s, pm);
+    in_queue = outstanding_replenishment_orders(s->id, pm);
+    shortfall = required - current - in_queue;
+    if (shortfall > 0) {
+      // printf("DEBUG: SP %d placed RO for %d %s\n", s->id, shortfall,
+      //        material_str(pm));
+      // printf("(current %d; in_queue %d)\n", current, in_queue);
+      enqueue_replenishment_order(s->id, pm, shortfall);
+    }
+  }
 }
 
 Stockpile *find_stockpile_with_material(MaterialCount mc) {
@@ -896,17 +974,40 @@ ObjectReference object_under_point(int x, int y) {
 void tick_game(void) {
   // check stockpiles for missing materials and, if necessary issue
   // replenishment order
+  for (int i = 0; i < game.c_stockpile; i++) {
+    update_replenishment_orders(&game.stockpiles[i]);
+  }
+
+  // take replenishment jobs
+  int idle_worker = first_idle_worker();
+  int fro = fillable_replenishment_order();
+
+  while (idle_worker >= 0 && fro >= 0) {
+    Worker *w = get_worker_by_id(idle_worker);
+    struct ReplenishmentOrder *ro = get_replenishment_order(fro);
+    Stockpile *s =
+        find_stockpile_with_material((MaterialCount){ro->material, 1});
+    int available = material_in_stockpile(s, ro->material);
+    int desire = ro->amount_ordered - ro->amount_in_transit;
+    int pickup = (available < desire) ? available : desire;
+
+    w->job = JOB_REPLENISH_STOCKPILE;
+    w->status = W_MOVING;
+    w->job_target = (ObjectReference){O_STOCKPILE, ro->ordering_stockpile};
+    w->target = s->location;
+    w->target_material = ro->material;
+    w->target_count = pickup;
+
+    ro->amount_in_transit += pickup;
+
+    idle_worker = first_idle_worker();
+    fro = fillable_replenishment_order();
+  }
 
   // take other jobs
-  if (jobs_on_queue()) {
-    int idle_worker = first_idle_worker();
-    // printf("DEBUG_TICK_GAME: First Idle Worker is %d\n", idle_worker);
-    // print_worker(get_worker_by_id(0));
-
-    while (idle_worker >= 0 && jobs_on_queue()) {
-      worker_take_job(idle_worker, pop_job());
-      idle_worker = first_idle_worker();
-    }
+  while (idle_worker >= 0 && jobs_on_queue()) {
+    worker_take_job(idle_worker, pop_job());
+    idle_worker = first_idle_worker();
   }
 
   for (int i = 0; i < game.c_machines; i++) {
