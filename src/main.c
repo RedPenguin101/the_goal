@@ -104,13 +104,21 @@ void draw_game_state(struct DrawState *ds) {
 
   // Draw context menu
 
-  if (ds->menu_mode) {
+  if (ds->placement_mode) {
     int y_offset = 1;
-    DrawTextEx(*font, "MENU",
+    DrawTextEx(*font, "PLACEMENT MODE (q to quit)",
                (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
                          (y_offset++ * font_size)},
                font_size, 4, BLUE);
-    
+  }
+
+  else if (ds->menu_mode) {
+    int y_offset = 1;
+    DrawTextEx(*font, "MENU (q to quit)",
+               (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
+                         (y_offset++ * font_size)},
+               font_size, 4, BLUE);
+
     DrawTextEx(*font, "m) MACHINE",
                (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
                          (y_offset++ * font_size)},
@@ -120,7 +128,6 @@ void draw_game_state(struct DrawState *ds) {
                (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
                          (y_offset++ * font_size)},
                font_size, 4, BLUE);
-
   } else {
     ObjectReference o = object_under_point(gs->cursor.x, gs->cursor.y);
 
@@ -232,8 +239,12 @@ void draw_game_state(struct DrawState *ds) {
     }
 
     // draw cursor
+  }
+
+  if (!ds->menu_mode) {
     draw_frame_in_square(FRAME_CURSOR, gs->cursor.x, gs->cursor.y, tex);
   }
+
   if (ds->paused) {
     DrawTextEx(*font, "PAUSED",
                (Vector2){SQUARE_SIZE * (MAX_X / 2.0f) + font_size,
@@ -246,18 +257,40 @@ void draw_game_state(struct DrawState *ds) {
 
 void handle_input(struct DrawState *ds) {
   GameState *gs = ds->gs;
-  if (IsKeyPressed(KEY_RIGHT) && (gs->cursor.x < MAX_X)) {
-    gs->cursor.x++;
+
+  if (ds->placement_mode) {
+    if (IsKeyPressed(KEY_Q)) {
+      ds->menu_mode = true;
+      ds->placement_mode = false;
+    }
   }
-  if (IsKeyPressed(KEY_LEFT) && (gs->cursor.x > 0)) {
-    gs->cursor.x--;
+
+  if (ds->menu_mode) {
+    if (IsKeyPressed(KEY_Q)) {
+      ds->menu_mode = false;
+    }
+
+    if (IsKeyPressed(KEY_S)) {
+      ds->menu_mode = false;
+      ds->placement_mode = true;
+    }
   }
-  if (IsKeyPressed(KEY_UP) && (gs->cursor.y > 0)) {
-    gs->cursor.y--;
+
+  if (!ds->menu_mode) {
+    if (IsKeyPressed(KEY_RIGHT) && (gs->cursor.x < MAX_X)) {
+      gs->cursor.x++;
+    }
+    if (IsKeyPressed(KEY_LEFT) && (gs->cursor.x > 0)) {
+      gs->cursor.x--;
+    }
+    if (IsKeyPressed(KEY_UP) && (gs->cursor.y > 0)) {
+      gs->cursor.y--;
+    }
+    if (IsKeyPressed(KEY_DOWN) && (gs->cursor.y < MAX_Y)) {
+      gs->cursor.y++;
+    }
   }
-  if (IsKeyPressed(KEY_DOWN) && (gs->cursor.y < MAX_Y)) {
-    gs->cursor.y++;
-  }
+
   if (IsKeyPressed(KEY_Q)) {
     quit = true;
   }
