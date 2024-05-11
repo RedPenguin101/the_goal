@@ -793,13 +793,11 @@ void start_production_job(Machine *m) {
     printf("ERROR: Trying to start production job, but don't have required "
            "materials\n");
     exit(1);
-    
   }
 
   if (m->working) {
     printf("ERROR: Trying to start production job, machine already working!\n");
     exit(1);
-    
   }
 
   printf("DEBUG: Starting Production Job, clearing inputs\n");
@@ -820,8 +818,7 @@ void start_production_job(Machine *m) {
 }
 
 void tick_machine(Machine *m) {
-  if (m->has_current_work_order && m->worker >= 0 &&
-      m->working) {
+  if (m->has_current_work_order && m->worker >= 0 && m->working) {
 
     printf("DEBUG_TICK_MACHINE: machine is working...\n");
     if (m->job_time_left > 0) {
@@ -1111,7 +1108,8 @@ void tick_worker(Worker *w) {
         w->status = W_CARRYING;
       } else {
         printf("DEBUG: W%d tried to pick up material from stockpile, but "
-               "there wasn't enough in it.\n", w->id);
+               "there wasn't enough in it.\n",
+               w->id);
         w->status = W_CANT_PROCEED;
       }
     } else {
