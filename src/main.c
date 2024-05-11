@@ -17,6 +17,7 @@
 #define FRAME_STOCKPILE (11 * 16) + 0
 #define FRAME_CURSOR (5 * 16) + 8
 #define FRAME_MATERIAL (1 * 16) + 14
+#define FRAME_UNKNOWN (3 * 16) + 15
 
 #define FPS 60
 #define TPS 60
@@ -32,6 +33,7 @@ struct DrawState {
   bool paused;
   bool placement_mode;
   enum ObjectType placement_of;
+  Vector2 placement_size;
 } draw_state;
 
 Vector2 frame_to_row_col(int frame, int frames_per_row) {
@@ -108,6 +110,10 @@ void draw_game_state(struct DrawState *ds) {
   if (ds->placement_mode) {
     int y_offset = 1;
     DrawTextEx(*font, "PLACEMENT MODE (q to quit)",
+               (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
+                         (y_offset++ * font_size)},
+               font_size, 4, BLUE);
+    DrawTextEx(*font, "hjkl to resize, c to place.",
                (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
                          (y_offset++ * font_size)},
                font_size, 4, BLUE);
@@ -238,20 +244,33 @@ void draw_game_state(struct DrawState *ds) {
       exit(1);
     }
     }
-
-    // draw cursor
   }
 
+  // draw cursor
   if (!ds->menu_mode) {
-    int cursor;
-    if (ds->placement_mode) {
-      if (ds->placement_of == O_STOCKPILE) {
-        cursor = FRAME_STOCKPILE;
-      }
+    draw_frame_in_square(FRAME_CURSOR, gs->cursor.x, gs->cursor.y, tex);
+  }
+
+  // draw placement rect
+  if (ds->placement_mode) {
+    int frame_sprite;
+    if (ds->placement_of == O_STOCKPILE) {
+      frame_sprite = FRAME_STOCKPILE;
+    } else if (ds->placement_of == FRAME_MACHINE) {
+      frame_sprite = FRAME_MACHINE;
     } else {
-      cursor = FRAME_CURSOR;
+      frame_sprite = FRAME_UNKNOWN;
     }
-    draw_frame_in_square(cursor, gs->cursor.x, gs->cursor.y, tex);
+
+    int sx = ds->gs->cursor.x;
+    int sy = ds->gs->cursor.y;
+    int ex = sx + ds->placement_size.x;
+    int ey = sy + ds->placement_size.y;
+    for (int x = sx; x < ex; x++) {
+      for (int y = sy; y < ey; y++) {
+        draw_frame_in_square(frame_sprite, x, y, tex);
+      }
+    }
   }
 
   if (ds->paused) {
@@ -283,6 +302,7 @@ void handle_input(struct DrawState *ds) {
       ds->menu_mode = false;
       ds->placement_mode = true;
       ds->placement_of = O_STOCKPILE;
+      ds->placement_size = (Vector2){1, 1};
     }
   }
 
@@ -301,14 +321,28 @@ void handle_input(struct DrawState *ds) {
     }
   }
 
+  if (ds->placement_mode && ds->placement_of == O_STOCKPILE) {
+    if (IsKeyPressed(KEY_L)) {
+      ds->placement_size.x += 1;
+    }
+    if (IsKeyPressed(KEY_H) && ds->placement_size.x > 1) {
+      ds->placement_size.x -= 1;
+    }
+    if (IsKeyPressed(KEY_J)) {
+      ds->placement_size.y += 1;
+    }
+    if (IsKeyPressed(KEY_K) && ds->placement_size.y > 1) {
+      ds->placement_size.y -= 1;
+    }
+    if (IsKeyPressed(KEY_C)) {
+      add_stockpile(gs->cursor.x, gs->cursor.y, ds->placement_size.x,
+                    ds->placement_size.y);
+      ds->placement_mode = false;
+    }
+  }
+
   if (IsKeyPressed(KEY_Q)) {
     quit = true;
-  }
-  if (IsKeyPressed(KEY_J)) {
-    debug_print_job_queue();
-  }
-  if (IsKeyPressed(KEY_R)) {
-    debug_print_ro_queue();
   }
   if (IsKeyPressed(KEY_P)) {
     ds->paused = !ds->paused;
@@ -318,6 +352,12 @@ void handle_input(struct DrawState *ds) {
       ds->menu_mode = true;
     }
   }
+  /* if (IsKeyPressed(KEY_J)) { */
+  /*   debug_print_job_queue(); */
+  /* } */
+  /* if (IsKeyPressed(KEY_R)) { */
+  /*   debug_print_ro_queue(); */
+  /* } */
   ObjectReference o = object_under_point(gs->cursor.x, gs->cursor.y);
   if (o.object_type == O_MACHINE) {
     if (IsKeyPressed(KEY_A)) {
