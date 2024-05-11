@@ -31,6 +31,7 @@ struct DrawState {
   bool menu_mode;
   bool paused;
   bool placement_mode;
+  enum ObjectType placement_of;
 } draw_state;
 
 Vector2 frame_to_row_col(int frame, int frames_per_row) {
@@ -242,7 +243,15 @@ void draw_game_state(struct DrawState *ds) {
   }
 
   if (!ds->menu_mode) {
-    draw_frame_in_square(FRAME_CURSOR, gs->cursor.x, gs->cursor.y, tex);
+    int cursor;
+    if (ds->placement_mode) {
+      if (ds->placement_of == O_STOCKPILE) {
+        cursor = FRAME_STOCKPILE;
+      }
+    } else {
+      cursor = FRAME_CURSOR;
+    }
+    draw_frame_in_square(cursor, gs->cursor.x, gs->cursor.y, tex);
   }
 
   if (ds->paused) {
@@ -273,6 +282,7 @@ void handle_input(struct DrawState *ds) {
     if (IsKeyPressed(KEY_S)) {
       ds->menu_mode = false;
       ds->placement_mode = true;
+      ds->placement_of = O_STOCKPILE;
     }
   }
 
