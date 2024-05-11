@@ -19,7 +19,7 @@
 #define FRAME_MATERIAL (1 * 16) + 14
 
 #define FPS 60
-#define TPS 5
+#define TPS 60
 
 bool quit = false;
 bool paused = false;
@@ -241,6 +241,9 @@ void handle_input(GameState *gs) {
   }
   if (IsKeyPressed(KEY_J)) {
     debug_print_job_queue();
+  }
+  if (IsKeyPressed(KEY_R)) {
+    debug_print_ro_queue();
   }
   if (IsKeyPressed(KEY_P)) {
     paused = !paused;

@@ -94,7 +94,9 @@ typedef struct Worker {
   ProductionMaterial target_material;
   int target_count;
   enum Job job;
+  int job_id;
   ObjectReference job_target;
+  ObjectReference job_target_secondary;
   ProductionMaterial carrying;
   int carrying_count;
 } Worker;
@@ -108,6 +110,7 @@ typedef struct Stockpile {
   int c_contents;
   ProductionMaterial contents[10];
   int contents_count[10];
+  int contents_earmarks[10];
 
   int c_required_material;
   ProductionMaterial required_material[10];
@@ -134,6 +137,7 @@ char *machine_str(enum MachineType m);
 char *recipe_str(RecipeName rn);
 char *job_str(enum Job j);
 void debug_print_job_queue(void);
+void debug_print_ro_queue(void);
 
 int add_stockpile(int x, int y, int w, int h);
 void add_material_to_stockpile(Stockpile *s, ProductionMaterial p, int count);
