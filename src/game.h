@@ -64,8 +64,9 @@ typedef struct Machine {
   int id;
   char name[10];
   enum MachineType type;
-  int job_time_left;
   bool has_current_work_order;
+  bool working;
+  int job_time_left;
   Recipe active_recipe;
 
   int c_input_buffer;

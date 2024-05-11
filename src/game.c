@@ -62,6 +62,7 @@ void add_input_stockpile_to_machine(int mid, int sid);
 
 // TODO: Should probably take a machine pointer, not id.
 void assign_machine_production_job(int machine_id, RecipeName rn);
+void start_production_job(Machine *m);
 void complete_production_job(Machine *m);
 int machine_has_input(Machine *m, ProductionMaterial p);
 MaterialCount next_unfullfilled_material(Machine *m, Recipe r);
@@ -713,6 +714,8 @@ void assign_machine_production_job(int id, RecipeName rn) {
   Recipe r = get_recipe_from_name(rn);
   Machine *m = get_machine_by_id(id);
 
+  printf("DEBUG: machine %d assigned recipe %s\n", id, recipe_str(rn));
+
   m->has_current_work_order = true;
   m->active_recipe = r;
   m->job_time_left = r.time;
@@ -736,6 +739,7 @@ void complete_production_job(Machine *m) {
   w->job = JOB_EMPTY_OUTPUT_BUFFER;
   w->job_target = (ObjectReference){O_MACHINE, m->id};
   w->target = m->location;
+  m->working = false;
 }
 
 int machine_has_input(Machine *m, ProductionMaterial p) {
@@ -775,10 +779,51 @@ bool machine_has_required_inputs(Machine *m, Recipe r) {
   return (mc.count == 0);
 }
 
+int index_of_material_in_machine_input(Machine *m, ProductionMaterial p) {
+  for (int i = 0; i < m->c_input_buffer; i++) {
+    if (m->input_buffer[i] == p) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+void start_production_job(Machine *m) {
+  if (!machine_has_required_inputs(m, m->active_recipe)) {
+    printf("ERROR: Trying to start production job, but don't have required "
+           "materials\n");
+    exit(1);
+    
+  }
+
+  if (m->working) {
+    printf("ERROR: Trying to start production job, machine already working!\n");
+    exit(1);
+    
+  }
+
+  printf("DEBUG: Starting Production Job, clearing inputs\n");
+
+  Recipe r = m->active_recipe;
+  ProductionMaterial pm;
+  int required;
+  int j;
+
+  for (int i = 0; i < r.c_inputs; i++) {
+    pm = r.inputs[i];
+    required = r.inputs_count[i];
+    j = index_of_material_in_machine_input(m, pm);
+    m->input_buffer_count[j] -= required;
+  }
+
+  m->working = true;
+}
+
 void tick_machine(Machine *m) {
   if (m->has_current_work_order && m->worker >= 0 &&
-      machine_has_required_inputs(m, m->active_recipe)) {
-    // printf("DEBUG_TICK_MACHINE: machine is working...\n");
+      m->working) {
+
+    printf("DEBUG_TICK_MACHINE: machine is working...\n");
     if (m->job_time_left > 0) {
       m->job_time_left--;
     } else {
@@ -884,6 +929,8 @@ void worker_take_job(int worker_id, struct JobQueueItem jq) {
     w->job_target = jq.object;
     w->status = W_MOVING;
 
+    m->worker = worker_id;
+
     printf("DEBUG: W:%d took job to to man machine %s\n", worker_id, m->name);
     sprintf(mb, "DEBUG: assigning W:%d to man machine %s\n", worker_id,
             m->name);
@@ -978,6 +1025,7 @@ void tick_worker(Worker *w) {
     // they can now complete the assigned job. If circumstances have
     // changed, they should continue with their intended task.
     // Otherwise they should continue to hold.
+    // TODO: not implemented yet.
 
     switch (w->job) {
     default:
@@ -989,7 +1037,7 @@ void tick_worker(Worker *w) {
     return;
   }
 
-  // If the worker isn't at the destination, just move towards the
+  // If the worker isn't at the destination, move towards the
   // destination
 
   if (!vec_equal(w->location, w->target)) {
@@ -1033,7 +1081,6 @@ void tick_worker(Worker *w) {
     Stockpile *s = get_stockpile_by_id(m->input_stockpile);
 
     if (w->status == W_CARRYING) {
-      // printf("DEBUG_TICK_WORKER: dropping material at machine\n");
       worker_drop_material_at_machine(w, m);
       MaterialCount mc = next_unfullfilled_material(m, m->active_recipe);
       if (mc.count > 0) { // the machine requires more materials
@@ -1046,9 +1093,9 @@ void tick_worker(Worker *w) {
         w->status = W_MOVING;
         w->target = s->location;
       } else { // machine has what it needs
-        printf("DEBUG: Machine has what it needs, switching to "
-               "producing\n");
+        printf("DEBUG: Machine has what it needs, switching to producing\n");
         m->worker = w->id;
+        start_production_job(m);
         w->job = JOB_MAN_MACHINE;
         w->status = W_PRODUCING;
       }
@@ -1063,8 +1110,8 @@ void tick_worker(Worker *w) {
         w->target = m->location;
         w->status = W_CARRYING;
       } else {
-        printf("DEBUG: Worker tried to pick up material from stockpile, but "
-               "there wasn't enough in it.\n");
+        printf("DEBUG: W%d tried to pick up material from stockpile, but "
+               "there wasn't enough in it.\n", w->id);
         w->status = W_CANT_PROCEED;
       }
     } else {
@@ -1081,6 +1128,7 @@ void tick_worker(Worker *w) {
     Machine *m = get_machine_by_id(w->job_target.id);
 
     if (machine_has_required_inputs(m, m->active_recipe)) {
+      start_production_job(m);
       w->status = W_PRODUCING;
       return;
     }
@@ -1096,7 +1144,7 @@ void tick_worker(Worker *w) {
   case JOB_REPLENISH_STOCKPILE: {
     if (w->status == W_MOVING) {
       Stockpile *s = get_stockpile_by_id(w->job_target_secondary.id);
-      // worker reached stockpile and will pick up (an un-earmark) material
+      // worker reached stockpile and will pick up (and un-earmark) material
       earmark_material_in_stockpile(s, w->target_material, (-w->target_count));
       worker_pickup_from_stockpile(w, s, w->target_material, w->target_count);
 
