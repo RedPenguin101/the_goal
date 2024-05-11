@@ -1,13 +1,33 @@
 Menu for adding things: machines, stockpile, worker
+
 Stocastic variation in timing
+
 Implement held jobs for man_machine etc.
+
 Walls and pathfinding for workers
-Set up room two of factory: pulling lengths, 2x cutting stations, 1x point grinding station
+
+Set up room two of factory: pulling lengths, 2x cutting stations, 1x
+point grinding station
+
 Limit jobs workers can do.
+
 Factory input and output nodes.
-BUG: item not being put in existing stockpile location
+
 BUG: stockpile graphic doesn't wrap
-If can't replenish, find another job to do (put the job back on the queue)
+
 Do ... something when fulfill input can't be done. Maybe just go idle
+
 Hover on worker to cancel current order (put back to queue)
-change job queue just to be a normal array like replenishment
+
+REFACTOR: change job queue just to be a normal array like replenishment
+
+REFACTOR: fix inconsistencies in things that take pointers and things that take ids
+
+Improve stockpile puts:
+- wrap stockpile graphics on exceed x
+- block puts when stockpile is full
+- limit size of piles, and overspill to additional piles
+
+Debug console?
+
+Popup menu on M

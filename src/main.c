@@ -22,13 +22,15 @@
 #define TPS 60
 
 bool quit = false;
-bool paused = false;
 
 struct DrawState {
   GameState *gs;
   char *context_menu_text;
   Texture2D *tilemap;
   Font *font;
+  bool menu_mode;
+  bool paused;
+  bool placement_mode;
 } draw_state;
 
 Vector2 frame_to_row_col(int frame, int frames_per_row) {
@@ -101,119 +103,138 @@ void draw_game_state(struct DrawState *ds) {
            SCREEN_HEIGHT, GRAY);
 
   // Draw context menu
-  ObjectReference o = object_under_point(gs->cursor.x, gs->cursor.y);
 
-  switch (o.object_type) {
-  case O_NOTHING: {
-    break;
-  }
-  case O_WORKER: {
-    // printf("DEBUG: Worker under cursor\n");
-    Worker *w = get_worker_by_id(o.id);
-    sprintf(text_buffer, "Worker %d, doing %s", w->id, job_str(w->job));
-    DrawTextEx(*font, text_buffer,
-               (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, font_size},
-               font_size, 4, BLUE);
-
-    break;
-  }
-  case O_MACHINE: {
+  if (ds->menu_mode) {
     int y_offset = 1;
-    // printf("DEBUG: Machine under cursor\n");
-    Machine *m = get_machine_by_id(o.id);
-    sprintf(text_buffer, "%s machine %d", machine_str(m->type), m->id);
-    DrawTextEx(*font, text_buffer,
+    DrawTextEx(*font, "MENU",
                (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
-                         (font_size * y_offset)},
+                         (y_offset++ * font_size)},
                font_size, 4, BLUE);
-    y_offset++;
+    
+    DrawTextEx(*font, "m) MACHINE",
+               (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
+                         (y_offset++ * font_size)},
+               font_size, 4, BLUE);
 
-    if (m->has_current_work_order) {
-      sprintf(text_buffer, "Machining batch of %s",
-              recipe_str(m->active_recipe.name));
+    DrawTextEx(*font, "s) STOCKPILE",
+               (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
+                         (y_offset++ * font_size)},
+               font_size, 4, BLUE);
+
+  } else {
+    ObjectReference o = object_under_point(gs->cursor.x, gs->cursor.y);
+
+    switch (o.object_type) {
+    case O_NOTHING: {
+      break;
+    }
+    case O_WORKER: {
+      // printf("DEBUG: Worker under cursor\n");
+      Worker *w = get_worker_by_id(o.id);
+      sprintf(text_buffer, "Worker %d, doing %s", w->id, job_str(w->job));
+      DrawTextEx(*font, text_buffer,
+                 (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, font_size},
+                 font_size, 4, BLUE);
+
+      break;
+    }
+    case O_MACHINE: {
+      int y_offset = 1;
+      // printf("DEBUG: Machine under cursor\n");
+      Machine *m = get_machine_by_id(o.id);
+      sprintf(text_buffer, "%s machine %d", machine_str(m->type), m->id);
       DrawTextEx(*font, text_buffer,
                  (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
                            (font_size * y_offset)},
                  font_size, 4, BLUE);
       y_offset++;
-    } else {
-      DrawTextEx(*font, "Idle",
-                 (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
-                           (font_size * y_offset)},
-                 font_size, 4, BLUE);
-    }
 
-    DrawTextEx(*font, "a) add job",
-               (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
-                         SQUARE_SIZE * (MAX_Y - 2)},
-               font_size, 4, BLUE);
-    break;
-  }
-  case O_STOCKPILE: {
-    // printf("DEBUG: Stockpile under cursor\n");
-
-    Stockpile *s = get_stockpile_by_id(o.id);
-    sprintf(text_buffer, "Stockpile with ID %d", s->id);
-    DrawTextEx(*font, text_buffer,
-               (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, font_size},
-               font_size, 4, BLUE);
-
-    int y_offset = 2;
-
-    if (s->c_contents > 0) {
-      DrawTextEx(
-          *font, "Contains",
-          (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, (font_size * 2)},
-          font_size, 4, BLUE);
-      y_offset++;
-
-      for (int i = 0; i < s->c_contents; i++) {
-        if (s->contents_count[i] > 0) {
-          sprintf(text_buffer, "\t%s: %d", material_str(s->contents[i]),
-                  s->contents_count[i]);
-          DrawTextEx(*font, text_buffer,
-                     (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
-                               (font_size * y_offset)},
-                     font_size, 4, BLUE);
-          y_offset++;
-        }
+      if (m->has_current_work_order) {
+        sprintf(text_buffer, "Machining batch of %s",
+                recipe_str(m->active_recipe.name));
+        DrawTextEx(*font, text_buffer,
+                   (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
+                             (font_size * y_offset)},
+                   font_size, 4, BLUE);
+        y_offset++;
+      } else {
+        DrawTextEx(*font, "Idle",
+                   (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
+                             (font_size * y_offset)},
+                   font_size, 4, BLUE);
       }
-    }
 
-    if (s->c_required_material > 0) {
-      DrawTextEx(*font, "Requires",
+      DrawTextEx(*font, "a) add job",
                  (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
-                           (font_size * y_offset)},
+                           SQUARE_SIZE * (MAX_Y - 2)},
+                 font_size, 4, BLUE);
+      break;
+    }
+    case O_STOCKPILE: {
+      // printf("DEBUG: Stockpile under cursor\n");
+
+      Stockpile *s = get_stockpile_by_id(o.id);
+      sprintf(text_buffer, "Stockpile with ID %d", s->id);
+      DrawTextEx(*font, text_buffer,
+                 (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, font_size},
                  font_size, 4, BLUE);
 
-      y_offset++;
+      int y_offset = 2;
 
-      for (int i = 0; i < s->c_required_material; i++) {
-        if (s->required_material_count[i] > 0) {
-          sprintf(text_buffer, "\t%s: %d",
-                  material_str(s->required_material[i]),
-                  s->required_material_count[i]);
-          DrawTextEx(*font, text_buffer,
-                     (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
-                               (font_size * y_offset)},
-                     font_size, 4, BLUE);
-          y_offset++;
+      if (s->c_contents > 0) {
+        DrawTextEx(
+            *font, "Contains",
+            (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, (font_size * 2)},
+            font_size, 4, BLUE);
+        y_offset++;
+
+        for (int i = 0; i < s->c_contents; i++) {
+          if (s->contents_count[i] > 0) {
+            sprintf(text_buffer, "\t%s: %d", material_str(s->contents[i]),
+                    s->contents_count[i]);
+            DrawTextEx(*font, text_buffer,
+                       (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
+                                 (font_size * y_offset)},
+                       font_size, 4, BLUE);
+            y_offset++;
+          }
         }
       }
+
+      if (s->c_required_material > 0) {
+        DrawTextEx(*font, "Requires",
+                   (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
+                             (font_size * y_offset)},
+                   font_size, 4, BLUE);
+
+        y_offset++;
+
+        for (int i = 0; i < s->c_required_material; i++) {
+          if (s->required_material_count[i] > 0) {
+            sprintf(text_buffer, "\t%s: %d",
+                    material_str(s->required_material[i]),
+                    s->required_material_count[i]);
+            DrawTextEx(*font, text_buffer,
+                       (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
+                                 (font_size * y_offset)},
+                       font_size, 4, BLUE);
+            y_offset++;
+          }
+        }
+      }
+
+      break;
+    }
+    default: {
+      // printf("ERROR: Unrecognized object %d under cursor\n", o.object_type);
+      exit(1);
+    }
     }
 
-    break;
+    // draw cursor
+    draw_frame_in_square(FRAME_CURSOR, gs->cursor.x, gs->cursor.y, tex);
   }
-  default: {
-    // printf("ERROR: Unrecognized object %d under cursor\n", o.object_type);
-    exit(1);
-  }
-  }
-
-  // draw cursor
-  draw_frame_in_square(FRAME_CURSOR, gs->cursor.x, gs->cursor.y, tex);
-
-  if (paused) {
+  if (ds->paused) {
     DrawTextEx(*font, "PAUSED",
                (Vector2){SQUARE_SIZE * (MAX_X / 2.0f) + font_size,
                          SQUARE_SIZE * (MAX_Y - 1)},
@@ -223,7 +244,8 @@ void draw_game_state(struct DrawState *ds) {
   EndDrawing();
 }
 
-void handle_input(GameState *gs) {
+void handle_input(struct DrawState *ds) {
+  GameState *gs = ds->gs;
   if (IsKeyPressed(KEY_RIGHT) && (gs->cursor.x < MAX_X)) {
     gs->cursor.x++;
   }
@@ -246,7 +268,12 @@ void handle_input(GameState *gs) {
     debug_print_ro_queue();
   }
   if (IsKeyPressed(KEY_P)) {
-    paused = !paused;
+    ds->paused = !ds->paused;
+  }
+  if (IsKeyPressed(KEY_M)) {
+    if (!ds->menu_mode) {
+      ds->menu_mode = true;
+    }
   }
   ObjectReference o = object_under_point(gs->cursor.x, gs->cursor.y);
   if (o.object_type == O_MACHINE) {
@@ -339,9 +366,9 @@ int main(void) {
   SetTargetFPS(FPS);
 
   while (!WindowShouldClose() && !quit) {
-    handle_input(gs);
+    handle_input(&ds);
     draw_game_state(&ds);
-    if (frame % (FPS / TPS) == 0 && !paused) {
+    if (frame % (FPS / TPS) == 0 && (!ds.menu_mode || !ds.paused)) {
       tick_game();
       turn++;
     }
