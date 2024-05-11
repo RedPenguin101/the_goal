@@ -10,10 +10,4 @@ BUG: stockpile graphic doesn't wrap
 If can't replenish, find another job to do (put the job back on the queue)
 Do ... something when fulfill input can't be done. Maybe just go idle
 Hover on worker to cancel current order (put back to queue)
-
-Replenishment:
-Don't want stockpiles to flood the queue with replenishment orders.
-Replenishment jobs should only be taken off the queue if the can be fulfilled.
-Otherwise they should be skipped.
-But this makes it not a fifo queue, which is annoying.
-Back to separate queue for replenishment orders which is not a fifo queue.
+change job queue just to be a normal array like replenishment

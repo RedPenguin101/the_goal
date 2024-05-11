@@ -2,10 +2,117 @@
 #include <stdio.h>
 #include <string.h>
 
-GameState game = {.cursor = (Vector){10, 10}};
-GameState *new_game(void) { return &game; }
+/*-------------------
+  Declarations
+ ------------------*/
+
+// Job queue
+// ---------
+
+#define MAX_JOB_QUEUE 100
+
+struct JobQueueItem {
+  ObjectReference object;
+  enum Job job;
+} job_queue[MAX_JOB_QUEUE];
+
+void enqueue_job(ObjectReference o, enum Job job);
+bool jobs_on_queue(void);
+struct JobQueueItem pop_job(void);
+
+// Stockpiles
+// ----------
+
+Stockpile *get_stockpile_by_id(int id);
+
+typedef struct MaterialCount {
+  ProductionMaterial material;
+  int count;
+} MaterialCount;
+
+int add_stockpile(int x, int y, int w, int h);
+
+void add_required_material_to_stockpile(Stockpile *s, ProductionMaterial m,
+                                        int amount);
+
+int index_of_material_in_stockpile(const Stockpile *s, ProductionMaterial p);
+
+Stockpile *find_stockpile_with_material(MaterialCount mc);
+Stockpile *find_stockpile_with_free_material(MaterialCount mc);
+
+int material_in_stockpile(Stockpile const *s, ProductionMaterial p);
+int free_material_in_stockpile(Stockpile const *s, ProductionMaterial p);
+
+void earmark_material_in_stockpile(Stockpile *s, ProductionMaterial p,
+                                   int count);
+void add_material_to_stockpile(Stockpile *s, ProductionMaterial p, int count);
+void remove_material_from_stockpile(Stockpile *s, ProductionMaterial p,
+                                    int amount_to_remove);
+
+void update_replenishment_orders(Stockpile *s);
+
+// Machines
+// --------
+
+Machine *get_machine_by_id(int id);
+
+int add_machine(enum MachineType type, char *name, int x, int y);
+void add_output_stockpile_to_machine(int mid, int sid);
+void add_input_stockpile_to_machine(int mid, int sid);
+
+// TODO: Should probably take a machine pointer, not id.
+void assign_machine_production_job(int machine_id, RecipeName rn);
+void complete_production_job(Machine *m);
+int machine_has_input(Machine *m, ProductionMaterial p);
+MaterialCount next_unfullfilled_material(Machine *m, Recipe r);
+bool machine_has_required_inputs(Machine *m, Recipe r);
+
+void tick_machine(Machine *m);
+
+// Workers
+// -------
 
 Worker *get_worker_by_id(int id);
+
+int add_worker(void);
+
+// TODO: Should probably return a pointer to worker.
+int first_idle_worker(void);
+void worker_take_job(int worker_id, struct JobQueueItem jq);
+
+void worker_pickup_output(Worker *w, Machine *m);
+void worker_drop_material_at_machine(Worker *w, Machine *m);
+void worker_pickup_from_stockpile(Worker *w, Stockpile *s, ProductionMaterial p,
+                                  int count);
+void worker_drop_at_stockpile(Worker *w, Stockpile *s);
+
+void tick_worker(Worker *w);
+
+// Replenishment Orders
+// --------------------
+
+#define MAX_REPLENISHMENT_QUEUE 100
+
+struct ReplenishmentOrder {
+  int ordering_stockpile;
+  ProductionMaterial material;
+  int amount_ordered;
+  int amount_picked_up;
+} replenishment_order_queue[MAX_REPLENISHMENT_QUEUE];
+
+struct ReplenishmentOrder *get_replenishment_order(int id);
+int next_fillable_replenishment_order(void);
+void enqueue_replenishment_order(int stockpile_id, ProductionMaterial pm,
+                                 int amount);
+void complete_replenishment_order(int ro_id, int amount);
+int outstanding_replenishment_orders(int stockpile_id, ProductionMaterial pm);
+
+/* -------------
+ * STATE
+ * ------------- */
+
+GameState game = {.cursor = (Vector){10, 10}};
+GameState *new_game(void) { return &game; }
 
 /* -------------
  * MESSAGE BUFFER
@@ -28,15 +135,6 @@ void add_message(char *message) {
 /* -------------
  * MATERIALS
  * ------------- */
-
-typedef struct MaterialCount {
-  ProductionMaterial material;
-  int count;
-} MaterialCount;
-
-Stockpile *find_stockpile_with_material(MaterialCount mc);
-Stockpile *find_stockpile_with_free_material(MaterialCount mc);
-int material_in_stockpile(Stockpile const *s, ProductionMaterial p);
 
 char _material[50] = {0};
 
@@ -90,15 +188,8 @@ char *material_str(ProductionMaterial m) {
  * JOBS
  * ------------- */
 
-#define MAX_JOB_QUEUE 100
-
 int job_queue_head = 0;
 int job_queue_tail = 0;
-
-struct JobQueueItem {
-  ObjectReference object;
-  enum Job job;
-} job_queue[MAX_JOB_QUEUE];
 
 char _job[50] = {0};
 
@@ -175,25 +266,14 @@ struct JobQueueItem pop_job(void) {
  * REPLENISHMENT
  * ------------- */
 
-#define MAX_REPLENISHMENT_QUEUE 100
-
-struct ReplenishmentOrder {
-  int ordering_stockpile;
-  ProductionMaterial material;
-  int amount_ordered;
-  int amount_picked_up;
-} replenishment_order_queue[MAX_REPLENISHMENT_QUEUE];
-
 void debug_print_ro(const struct ReplenishmentOrder *ro) {
   printf("RO for S%d, order of %d %s (%d picked up).\n", ro->ordering_stockpile,
          ro->amount_ordered, material_str(ro->material), ro->amount_picked_up);
 }
 
 void debug_print_ro_queue(void) {
-  struct ReplenishmentOrder ro;
   for (int i = 0; i < MAX_REPLENISHMENT_QUEUE; i++) {
-    ro = replenishment_order_queue[i];
-    debug_print_ro(&ro);
+    debug_print_ro(&replenishment_order_queue[i]);
   }
 }
 
@@ -201,11 +281,14 @@ struct ReplenishmentOrder *get_replenishment_order(int id) {
   return &replenishment_order_queue[id];
 }
 
-int fillable_replenishment_order(void) {
+int next_fillable_replenishment_order(void) {
   struct ReplenishmentOrder ro;
+  int un_picked_amount;
+
   for (int i = 0; i < MAX_REPLENISHMENT_QUEUE; i++) {
     ro = replenishment_order_queue[i];
-    if ((ro.amount_ordered - ro.amount_picked_up) > 0 &&
+    un_picked_amount = ro.amount_ordered - ro.amount_picked_up;
+    if ((un_picked_amount) > 0 &&
         find_stockpile_with_free_material((MaterialCount){ro.material, 1})) {
       return i;
     }
@@ -215,14 +298,17 @@ int fillable_replenishment_order(void) {
 
 void enqueue_replenishment_order(int stockpile_id, ProductionMaterial pm,
                                  int amount) {
+  struct ReplenishmentOrder *ro;
+  int outstanding;
   for (int i = 0; i < MAX_REPLENISHMENT_QUEUE; i++) {
-    struct ReplenishmentOrder *ro = &replenishment_order_queue[i];
-    int outstanding = ro->amount_ordered - ro->amount_picked_up;
+    ro = &replenishment_order_queue[i];
+    outstanding = ro->amount_ordered - ro->amount_picked_up;
+
     if (outstanding == 0) {
-      replenishment_order_queue[i].ordering_stockpile = stockpile_id;
-      replenishment_order_queue[i].material = pm;
-      replenishment_order_queue[i].amount_ordered = amount;
-      replenishment_order_queue[i].amount_picked_up = 0;
+      ro->ordering_stockpile = stockpile_id;
+      ro->material = pm;
+      ro->amount_ordered = amount;
+      ro->amount_picked_up = 0;
       return;
     }
   }
@@ -234,6 +320,7 @@ void complete_replenishment_order(int ro_id, int amount) {
   struct ReplenishmentOrder *ro = get_replenishment_order(ro_id);
   ro->amount_ordered -= amount;
   ro->amount_picked_up -= amount;
+
   if (ro->amount_ordered == 0) {
     ro->material = NONE;
     ro->ordering_stockpile = -1;
@@ -243,6 +330,7 @@ void complete_replenishment_order(int ro_id, int amount) {
 int outstanding_replenishment_orders(int stockpile_id, ProductionMaterial pm) {
   int amount = 0;
   struct ReplenishmentOrder ro;
+
   for (int i = 0; i < MAX_REPLENISHMENT_QUEUE; i++) {
     ro = replenishment_order_queue[i];
     if (ro.ordering_stockpile == stockpile_id && ro.material == pm) {
@@ -391,25 +479,33 @@ void add_required_material_to_stockpile(Stockpile *s, ProductionMaterial m,
 Stockpile *get_stockpile_by_id(int id) { return &game.stockpiles[id]; }
 
 void add_material_to_stockpile(Stockpile *s, ProductionMaterial p, int count) {
-  s->contents[s->c_contents] = p;
-  s->contents_count[s->c_contents] = count;
-  s->c_contents++;
+  int i = index_of_material_in_stockpile(s, p);
+  if (i == -1) {
+    s->contents[s->c_contents] = p;
+    s->contents_count[s->c_contents] = count;
+    s->c_contents++;
+  } else {
+    s->contents_count[i] += count;
+  }
 }
 
 int material_in_stockpile(Stockpile const *s, ProductionMaterial p) {
-  int count = 0;
-  for (int i = 0; i < s->c_contents; i++) {
-    if (s->contents[i] == p) {
-      count += s->contents_count[i];
-    }
-  }
-  return count;
+  int i = index_of_material_in_stockpile(s, p);
+  return s->contents_count[i];
 }
 
 void earmark_material_in_stockpile(Stockpile *s, ProductionMaterial p,
                                    int count) {
   int i = index_of_material_in_stockpile(s, p);
+  if (i == -1) {
+    printf(
+        "ERROR: Cannot earmark %s in stockpile %d: material is not present\n",
+        material_str(p), s->id);
+    exit(1);
+  }
+
   s->contents_earmarks[i] += count;
+
   if (count > 0) {
     printf("DEBUG: Earmarking %d %s in S%d\n", count, material_str(p), s->id);
   } else {
@@ -420,13 +516,8 @@ void earmark_material_in_stockpile(Stockpile *s, ProductionMaterial p,
 }
 
 int free_material_in_stockpile(Stockpile const *s, ProductionMaterial p) {
-  int count = 0;
-  for (int i = 0; i < s->c_contents; i++) {
-    if (s->contents[i] == p) {
-      count += (s->contents_count[i] - s->contents_earmarks[i]);
-    }
-  }
-  return count;
+  int i = index_of_material_in_stockpile(s, p);
+  return (s->contents_count[i] - s->contents_earmarks[i]);
 }
 
 void update_replenishment_orders(Stockpile *s) {
@@ -628,7 +719,7 @@ void assign_machine_production_job(int id, RecipeName rn) {
   enqueue_job((ObjectReference){O_MACHINE, id}, JOB_MAN_MACHINE);
 }
 
-void complete_production(Machine *m) {
+void complete_production_job(Machine *m) {
   Worker *w = get_worker_by_id(m->worker);
 
   int num_outputs = m->active_recipe.c_outputs;
@@ -691,7 +782,7 @@ void tick_machine(Machine *m) {
     if (m->job_time_left > 0) {
       m->job_time_left--;
     } else {
-      complete_production(m);
+      complete_production_job(m);
 
       printf("DEBUG: Machine %s produced output: \n", m->name);
 
@@ -875,9 +966,9 @@ void worker_drop_at_stockpile(Worker *w, Stockpile *s) {
   printf("%ld: W:%d dropped %d %s at S%d\n", game.turn, w->id,
          w->carrying_count, material_str(w->carrying), s->id);
 
-  s->contents[s->c_contents] = w->carrying;
-  s->contents_count[s->c_contents] = w->carrying_count;
-  s->c_contents++;
+  add_material_to_stockpile(s, w->carrying, w->carrying_count);
+
+  w->carrying = NONE;
   w->carrying_count = 0;
 }
 
@@ -1035,7 +1126,7 @@ void tick_worker(Worker *w) {
   }
 
   case JOB_NONE: {
-    // randomly wander around
+    // TODO: randomly wander around
   } break;
   }
   }
@@ -1085,7 +1176,7 @@ void tick_game(void) {
 
   // take replenishment jobs
   int idle_worker = first_idle_worker();
-  int fro = fillable_replenishment_order();
+  int fro = next_fillable_replenishment_order();
 
   while (idle_worker >= 0 && fro >= 0) {
     Worker *w = get_worker_by_id(idle_worker);
@@ -1121,7 +1212,7 @@ void tick_game(void) {
     w->target_count = pickup;
 
     idle_worker = first_idle_worker();
-    fro = fillable_replenishment_order();
+    fro = next_fillable_replenishment_order();
   }
 
   // take other jobs
