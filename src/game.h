@@ -58,11 +58,17 @@ typedef struct Recipe {
   int time;
 } Recipe;
 
-enum MachineType { WIRE_WINDER, WIRE_PULLER, WIRE_CUTTER, WIRE_GRINDER };
+enum MachineType {
+  WIRE_WINDER,
+  WIRE_PULLER,
+  WIRE_CUTTER,
+  WIRE_GRINDER,
+  COUNT_MACHINE_TYPES
+};
+
 
 typedef struct Machine {
   int id;
-  char name[10];
   enum MachineType type;
   bool has_current_work_order;
   bool working;
@@ -108,7 +114,7 @@ typedef struct Stockpile {
   Vector size;
   bool can_be_taken_from;
   int attached_machine;
-  enum {INPUT, OUTPUT} io;
+  enum { INPUT, OUTPUT } io;
 
   int c_contents;
   ProductionMaterial contents[10];
@@ -148,7 +154,8 @@ void add_required_material_to_stockpile(Stockpile *s, ProductionMaterial p,
                                         int count);
 Stockpile *get_stockpile_by_id(int id);
 
-int add_machine(enum MachineType type, char *name, int x, int y);
+Vector machine_size(enum MachineType mt);
+int add_machine(enum MachineType type, int x, int y);
 const RecipeName *possible_recipes(const Machine *m);
 void add_output_stockpile_to_machine(int machine_id, int stockpile_id);
 void add_input_stockpile_to_machine(int machine_id, int stockpile_id);

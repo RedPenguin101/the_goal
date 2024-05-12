@@ -24,11 +24,7 @@
 
 bool quit = false;
 
-typedef enum {
-  MENU_NONE,
-  MENU_MAIN,
-  MENU_MACHINE_SELECT,
-} MenuMode;
+typedef enum { MENU_NONE, MENU_MAIN, MENU_MACHINE_SELECT } MenuMode;
 
 struct DrawState {
   GameState *gs;
@@ -39,6 +35,7 @@ struct DrawState {
   bool paused;
   bool placement_mode;
   enum ObjectType placement_of;
+  int placement_of_sub;
   Vector2 placement_size;
 } draw_state;
 
@@ -141,6 +138,24 @@ void draw_game_state(struct DrawState *ds) {
                (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
                          (y_offset++ * font_size)},
                font_size, 4, BLUE);
+  }
+
+  else if (ds->menu_mode == MENU_MACHINE_SELECT) {
+    int y_offset = 1;
+
+    DrawTextEx(*font, "SELECT MACHINE (q to quit)",
+               (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
+                         (y_offset++ * font_size)},
+               font_size, 4, BLUE);
+
+    for (int i = 0; i < COUNT_MACHINE_TYPES; i++) {
+      sprintf(text_buffer, "%d) %s", i + 1, machine_str(i));
+      DrawTextEx(*font, text_buffer,
+                 (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
+                           (y_offset++ * font_size)},
+                 font_size, 4, BLUE);
+    }
+
   } else {
     ObjectReference o = object_under_point(gs->cursor.x, gs->cursor.y);
 
@@ -278,7 +293,7 @@ void draw_game_state(struct DrawState *ds) {
     int frame_sprite;
     if (ds->placement_of == O_STOCKPILE) {
       frame_sprite = FRAME_STOCKPILE;
-    } else if (ds->placement_of == FRAME_MACHINE) {
+    } else if (ds->placement_of == O_MACHINE) {
       frame_sprite = FRAME_MACHINE;
     } else {
       frame_sprite = FRAME_UNKNOWN;
@@ -308,24 +323,43 @@ void draw_game_state(struct DrawState *ds) {
 void handle_input(struct DrawState *ds) {
   GameState *gs = ds->gs;
 
-  if (ds->placement_mode) {
-    if (IsKeyPressed(KEY_Q)) {
-      ds->menu_mode = MENU_MAIN;
-      ds->placement_mode = false;
-    }
-  }
-
   if (ds->menu_mode == MENU_MAIN) {
     if (IsKeyPressed(KEY_Q)) {
       ds->menu_mode = MENU_NONE;
     }
 
-    if (IsKeyPressed(KEY_S)) {
+    if (IsKeyPressed(KEY_S)) { // stockpile placement
       ds->menu_mode = MENU_NONE;
       ds->placement_mode = true;
       ds->placement_of = O_STOCKPILE;
       ds->placement_size = (Vector2){1, 1};
     }
+
+    if (IsKeyPressed(KEY_M)) {
+      ds->menu_mode = MENU_MACHINE_SELECT;
+    }
+    return;
+  }
+
+  if (ds->menu_mode == MENU_MACHINE_SELECT) {
+    if (IsKeyPressed(KEY_Q)) {
+      ds->menu_mode = MENU_MAIN;
+    }
+
+    for (int i = 0; i < COUNT_MACHINE_TYPES; i++) {
+      // 49 is num key 1
+      if (IsKeyPressed(49 + i)) {
+        printf("DEBUG: pressed key %d\n", 49 + i);
+        ds->menu_mode = MENU_NONE;
+        ds->placement_mode = true;
+        ds->placement_of = O_MACHINE;
+        ds->placement_of_sub = i;
+        Vector ps = machine_size(i);
+        ds->placement_size.x = ps.x;
+        ds->placement_size.y = ps.y;
+      }
+    }
+    return;
   }
 
   if (ds->menu_mode == MENU_NONE) {
@@ -343,37 +377,61 @@ void handle_input(struct DrawState *ds) {
     }
   }
 
-  if (ds->placement_mode && ds->placement_of == O_STOCKPILE) {
-    if (IsKeyPressed(KEY_L)) {
-      ds->placement_size.x += 1;
+  if (ds->placement_mode) {
+    if (ds->placement_of == O_STOCKPILE) {
+      if (IsKeyPressed(KEY_L)) {
+        ds->placement_size.x += 1;
+      }
+      if (IsKeyPressed(KEY_H) && ds->placement_size.x > 1) {
+        ds->placement_size.x -= 1;
+      }
+      if (IsKeyPressed(KEY_J)) {
+        ds->placement_size.y += 1;
+      }
+      if (IsKeyPressed(KEY_K) && ds->placement_size.y > 1) {
+        ds->placement_size.y -= 1;
+      }
+
+      if (IsKeyPressed(KEY_C)) {
+        add_stockpile(gs->cursor.x, gs->cursor.y, ds->placement_size.x,
+                      ds->placement_size.y);
+        ds->placement_mode = false;
+      }
+
+      if (IsKeyPressed(KEY_Q)) {
+        ds->placement_mode = false;
+        ds->menu_mode = MENU_MAIN;
+      }
     }
-    if (IsKeyPressed(KEY_H) && ds->placement_size.x > 1) {
-      ds->placement_size.x -= 1;
-    }
-    if (IsKeyPressed(KEY_J)) {
-      ds->placement_size.y += 1;
-    }
-    if (IsKeyPressed(KEY_K) && ds->placement_size.y > 1) {
-      ds->placement_size.y -= 1;
-    }
-    if (IsKeyPressed(KEY_C)) {
-      add_stockpile(gs->cursor.x, gs->cursor.y, ds->placement_size.x,
-                    ds->placement_size.y);
-      ds->placement_mode = false;
+
+    if (ds->placement_of == O_MACHINE) {
+
+      if (IsKeyPressed(KEY_C)) {
+        add_machine(ds->placement_of_sub, gs->cursor.x, gs->cursor.y);
+        ds->placement_mode = false;
+      }
+
+      if (IsKeyPressed(KEY_Q)) {
+        ds->placement_mode = false;
+        ds->menu_mode = MENU_MACHINE_SELECT;
+      }
     }
   }
 
-  if (IsKeyPressed(KEY_Q)) {
-    quit = true;
-  }
-  if (IsKeyPressed(KEY_P)) {
-    ds->paused = !ds->paused;
-  }
-  if (IsKeyPressed(KEY_M)) {
-    if (ds->menu_mode == MENU_NONE) {
+  if (ds->menu_mode == MENU_NONE && !ds->placement_mode) {
+    if (IsKeyPressed(KEY_Q)) {
+      quit = true;
+    }
+
+    if (IsKeyPressed(KEY_P)) {
+      ds->paused = !ds->paused;
+    }
+
+    if (IsKeyPressed(KEY_M)) {
       ds->menu_mode = MENU_MAIN;
     }
   }
+
   /* if (IsKeyPressed(KEY_J)) { */
   /*   debug_print_job_queue(); */
   /* } */
@@ -425,7 +483,7 @@ int main(void) {
   add_material_to_stockpile(s_in, WASHED_IRON_WIRE_COIL, 1);
   add_material_to_stockpile(s_in, EMPTY_SPINDLE, 1);
 
-  int winder = add_machine(WIRE_WINDER, "WireWind", 2, 4);
+  int winder = add_machine(WIRE_WINDER, 2, 4);
   add_output_stockpile_to_machine(winder, out);
   add_input_stockpile_to_machine(winder, in);
 
@@ -439,12 +497,12 @@ int main(void) {
   s_in = get_stockpile_by_id(in);
   add_required_material_to_stockpile(s_in, SPINDLED_WIRE_COIL, 5);
 
-  int puller = add_machine(WIRE_PULLER, "WirePull1", 9, 10);
+  int puller = add_machine(WIRE_PULLER, 9, 10);
   add_output_stockpile_to_machine(puller, out);
   add_input_stockpile_to_machine(puller, in);
 
   // CUTTER machine
-  int cutter = add_machine(WIRE_CUTTER, "WireCut", 12, 3);
+  int cutter = add_machine(WIRE_CUTTER, 12, 3);
   out = add_stockpile(12, 5, 2, 2);
   s_out = get_stockpile_by_id(out);
   s_out->can_be_taken_from = true;

@@ -56,7 +56,7 @@ void update_replenishment_orders(Stockpile *s);
 
 Machine *get_machine_by_id(int id);
 
-int add_machine(enum MachineType type, char *name, int x, int y);
+int add_machine(enum MachineType type, int x, int y);
 void add_output_stockpile_to_machine(int mid, int sid);
 void add_input_stockpile_to_machine(int mid, int sid);
 
@@ -623,6 +623,9 @@ char *machine_str(enum MachineType m) {
     strcpy(_machine, "WIRE_GRINDER");
     break;
   }
+  default:
+    printf("ERROR: Unrecognized machine type\n");
+    exit(1);
   }
   return _machine;
 }
@@ -651,7 +654,27 @@ const RecipeName *possible_recipes(const Machine *m) {
   }
 }
 
-int add_machine(enum MachineType type, char *name, int x, int y) {
+Vector machine_size(enum MachineType mt) {
+  switch (mt) {
+  case WIRE_PULLER:
+    return (Vector){2, 2};
+
+  case WIRE_WINDER:
+    return (Vector){2, 2};
+
+  case WIRE_GRINDER:
+    return (Vector){1, 1};
+
+  case WIRE_CUTTER:
+    return (Vector){1, 1};
+
+  default:
+    printf("ERROR: Unrecognized machine type\n");
+    exit(1);
+  }
+}
+
+int add_machine(enum MachineType type, int x, int y) {
   int id = game.c_machines;
 
   if (id > MAX_MACHINES) {
@@ -659,30 +682,10 @@ int add_machine(enum MachineType type, char *name, int x, int y) {
     exit(1);
   }
 
-  if (strlen(name) > 9) {
-    printf("ERROR: Machine name %s too long\n", name);
-    exit(1);
-  }
-
-  Vector v;
-  switch (type) {
-  case WIRE_PULLER:
-    v = (Vector){2, 2};
-    break;
-  case WIRE_WINDER:
-    v = (Vector){2, 2};
-    break;
-  case WIRE_GRINDER:
-    v = (Vector){1, 1};
-    break;
-  case WIRE_CUTTER:
-    v = (Vector){1, 1};
-    break;
-  }
+  Vector v = machine_size(type);
 
   game.machines[id] = (Machine){
       .id = id,
-      .name = {0},
       .type = type,
       .job_time_left = 0,
       .has_current_work_order = false,
@@ -692,8 +695,6 @@ int add_machine(enum MachineType type, char *name, int x, int y) {
       .size = v,
       .output_stockpile = -1,
   };
-
-  strcpy(game.machines[id].name, name);
 
   game.c_machines++;
 
@@ -836,7 +837,7 @@ void tick_machine(Machine *m) {
     } else {
       complete_production_job(m);
 
-      printf("DEBUG: Machine %s produced output: \n", m->name);
+      printf("DEBUG: Machine %d produced output: \n", m->id);
 
       for (int i = 0; i < m->c_output_buffer; i++)
         printf("\t%s: %d\n", material_str(m->output_buffer[i]),
@@ -938,9 +939,9 @@ void worker_take_job(int worker_id, struct JobQueueItem jq) {
 
     m->worker = worker_id;
 
-    printf("DEBUG: W:%d took job to to man machine %s\n", worker_id, m->name);
-    sprintf(mb, "DEBUG: assigning W:%d to man machine %s\n", worker_id,
-            m->name);
+    printf("DEBUG: W:%d took job to to man machine %d\n", worker_id, m->id);
+    sprintf(mb, "DEBUG: assigning W:%d to man machine %d\n", worker_id,
+            m->id);
     add_message(mb);
 
     break;
@@ -950,9 +951,9 @@ void worker_take_job(int worker_id, struct JobQueueItem jq) {
     w->target = m->location;
     w->status = W_MOVING;
     w->job = jq.job;
-    sprintf(mb, "DEBUG: assigning W%d to empty machine %s\n", worker_id,
-            m->name);
-    printf("DEBUG: W%d took job to empty machine %s\n", worker_id, m->name);
+    sprintf(mb, "DEBUG: assigning W%d to empty machine %d\n", worker_id,
+            m->id);
+    printf("DEBUG: W%d took job to empty machine %d\n", worker_id, m->id);
     add_message(mb);
     break;
   }
@@ -975,8 +976,8 @@ void worker_pickup_output(Worker *w, Machine *m) {
   int mat_count = m->output_buffer_count[o];
   w->carrying = mat;
   w->carrying_count = mat_count;
-  printf("DEBUG: W%d picked up %d %s from %s\n", w->id, mat_count,
-         material_str(mat), m->name);
+  printf("DEBUG: W%d picked up %d %s from %d\n", w->id, mat_count,
+         material_str(mat), m->id);
 }
 
 void worker_drop_material_at_machine(Worker *w, Machine *m) {
@@ -991,8 +992,8 @@ void worker_drop_material_at_machine(Worker *w, Machine *m) {
   w->carrying_count = 0;
 
   m->c_input_buffer++;
-  printf("DEBUG: W%d dropped %d %s to machine %s\n", w->id,
-         m->input_buffer_count[i], material_str(m->input_buffer[i]), m->name);
+  printf("DEBUG: W%d dropped %d %s to machine %d\n", w->id,
+         m->input_buffer_count[i], material_str(m->input_buffer[i]), m->id);
 }
 
 void worker_pickup_from_stockpile(Worker *w, Stockpile *s, ProductionMaterial p,
