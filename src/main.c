@@ -188,7 +188,12 @@ void draw_game_state(struct DrawState *ds) {
       // printf("DEBUG: Stockpile under cursor\n");
 
       Stockpile *s = get_stockpile_by_id(o.id);
-      sprintf(text_buffer, "Stockpile with ID %d", s->id);
+
+      if (s->attached_machine >= 0) {
+        sprintf(text_buffer, "Stockpile %d: %s for machine %d", s->id, (s->io == INPUT) ? "input" : "output", s->attached_machine);
+      } else {
+        sprintf(text_buffer, "Stockpile %d", s->id);
+      }
       DrawTextEx(*font, text_buffer,
                  (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, font_size},
                  font_size, 4, BLUE);

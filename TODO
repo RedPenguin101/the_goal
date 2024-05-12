@@ -1,5 +1,3 @@
-Menu for adding things: machines, stockpile, worker
-
 Stocastic variation in timing
 
 Implement held jobs for man_machine etc.
@@ -28,6 +26,8 @@ Improve stockpile puts:
 - block puts when stockpile is full
 - limit size of piles, and overspill to additional piles
 
-Debug console?
+Attach stockpile to machine
 
-Popup menu on M
+Add machine through menu
+
+Hire worker through menu

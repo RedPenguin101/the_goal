@@ -107,6 +107,8 @@ typedef struct Stockpile {
   Vector location;
   Vector size;
   bool can_be_taken_from;
+  int attached_machine;
+  enum {INPUT, OUTPUT} io;
 
   int c_contents;
   ProductionMaterial contents[10];

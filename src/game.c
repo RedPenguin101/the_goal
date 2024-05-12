@@ -447,7 +447,9 @@ int add_stockpile(int x, int y, int w, int h) {
                                     .contents_count = {0},
                                     .c_required_material = 0,
                                     .required_material = {0},
-                                    .required_material_count = {0}};
+                                    .required_material_count = {0},
+                                    .io = -1,
+                                    .attached_machine = -1};
   game.c_stockpile++;
   return id;
 }
@@ -703,11 +705,19 @@ Machine *get_machine_by_id(int id) { return &game.machines[id]; }
 void add_output_stockpile_to_machine(int mid, int sid) {
   Machine *m = get_machine_by_id(mid);
   m->output_stockpile = sid;
+
+  Stockpile *s = get_stockpile_by_id(sid);
+  s->io = OUTPUT;
+  s->attached_machine = mid;
 }
 
 void add_input_stockpile_to_machine(int mid, int sid) {
   Machine *m = get_machine_by_id(mid);
   m->input_stockpile = sid;
+
+  Stockpile *s = get_stockpile_by_id(sid);
+  s->io = INPUT;
+  s->attached_machine = mid;
 }
 
 void assign_machine_production_job(int id, RecipeName rn) {
