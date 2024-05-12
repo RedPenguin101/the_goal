@@ -185,27 +185,28 @@ void draw_game_state(struct DrawState *ds) {
       break;
     }
     case O_STOCKPILE: {
-      // printf("DEBUG: Stockpile under cursor\n");
+      int y_offset = 1;
 
       Stockpile *s = get_stockpile_by_id(o.id);
 
       if (s->attached_machine >= 0) {
-        sprintf(text_buffer, "Stockpile %d: %s for machine %d", s->id, (s->io == INPUT) ? "input" : "output", s->attached_machine);
+        sprintf(text_buffer, "Stockpile %d: %s for machine %d", s->id,
+                (s->io == INPUT) ? "input" : "output", s->attached_machine);
       } else {
         sprintf(text_buffer, "Stockpile %d", s->id);
       }
       DrawTextEx(*font, text_buffer,
-                 (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, font_size},
+                 (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
+                           (y_offset++ * font_size)},
                  font_size, 4, BLUE);
 
-      int y_offset = 2;
+      y_offset++;
 
       if (s->c_contents > 0) {
-        DrawTextEx(
-            *font, "Contains",
-            (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size, (font_size * 2)},
-            font_size, 4, BLUE);
-        y_offset++;
+        DrawTextEx(*font, "Contains",
+                   (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
+                             (y_offset++ * font_size)},
+                   font_size, 4, BLUE);
 
         for (int i = 0; i < s->c_contents; i++) {
           if (s->contents_count[i] > 0) {
@@ -213,9 +214,8 @@ void draw_game_state(struct DrawState *ds) {
                     s->contents_count[i]);
             DrawTextEx(*font, text_buffer,
                        (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
-                                 (font_size * y_offset)},
+                                 (font_size * y_offset++)},
                        font_size, 4, BLUE);
-            y_offset++;
           }
         }
       }
@@ -223,10 +223,8 @@ void draw_game_state(struct DrawState *ds) {
       if (s->c_required_material > 0) {
         DrawTextEx(*font, "Requires",
                    (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
-                             (font_size * y_offset)},
+                             (font_size * y_offset++)},
                    font_size, 4, BLUE);
-
-        y_offset++;
 
         for (int i = 0; i < s->c_required_material; i++) {
           if (s->required_material_count[i] > 0) {
@@ -235,11 +233,24 @@ void draw_game_state(struct DrawState *ds) {
                     s->required_material_count[i]);
             DrawTextEx(*font, text_buffer,
                        (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
-                                 (font_size * y_offset)},
+                                 (font_size * y_offset++)},
                        font_size, 4, BLUE);
-            y_offset++;
           }
         }
+      }
+
+      y_offset++;
+
+      if (s->attached_machine == -1) {
+        DrawTextEx(*font, "i) [NI] Add as input for machine",
+                   (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
+                             (font_size * y_offset++)},
+                   font_size, 4, BLUE);
+
+        DrawTextEx(*font, "o) [NI] Add as output for machine",
+                   (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
+                             (font_size * y_offset++)},
+                   font_size, 4, BLUE);
       }
 
       break;
