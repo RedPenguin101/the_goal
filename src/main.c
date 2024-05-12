@@ -24,12 +24,18 @@
 
 bool quit = false;
 
+typedef enum {
+  MENU_NONE,
+  MENU_MAIN,
+  MENU_MACHINE_SELECT,
+} MenuMode;
+
 struct DrawState {
   GameState *gs;
   char *context_menu_text;
   Texture2D *tilemap;
   Font *font;
-  bool menu_mode;
+  MenuMode menu_mode;
   bool paused;
   bool placement_mode;
   enum ObjectType placement_of;
@@ -119,7 +125,7 @@ void draw_game_state(struct DrawState *ds) {
                font_size, 4, BLUE);
   }
 
-  else if (ds->menu_mode) {
+  else if (ds->menu_mode == MENU_MAIN) {
     int y_offset = 1;
     DrawTextEx(*font, "MENU (q to quit)",
                (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
@@ -263,7 +269,7 @@ void draw_game_state(struct DrawState *ds) {
   }
 
   // draw cursor
-  if (!ds->menu_mode) {
+  if (ds->menu_mode == MENU_NONE) {
     draw_frame_in_square(FRAME_CURSOR, gs->cursor.x, gs->cursor.y, tex);
   }
 
@@ -304,25 +310,25 @@ void handle_input(struct DrawState *ds) {
 
   if (ds->placement_mode) {
     if (IsKeyPressed(KEY_Q)) {
-      ds->menu_mode = true;
+      ds->menu_mode = MENU_MAIN;
       ds->placement_mode = false;
     }
   }
 
-  if (ds->menu_mode) {
+  if (ds->menu_mode == MENU_MAIN) {
     if (IsKeyPressed(KEY_Q)) {
-      ds->menu_mode = false;
+      ds->menu_mode = MENU_NONE;
     }
 
     if (IsKeyPressed(KEY_S)) {
-      ds->menu_mode = false;
+      ds->menu_mode = MENU_NONE;
       ds->placement_mode = true;
       ds->placement_of = O_STOCKPILE;
       ds->placement_size = (Vector2){1, 1};
     }
   }
 
-  if (!ds->menu_mode) {
+  if (ds->menu_mode == MENU_NONE) {
     if (IsKeyPressed(KEY_RIGHT) && (gs->cursor.x < MAX_X)) {
       gs->cursor.x++;
     }
@@ -364,8 +370,8 @@ void handle_input(struct DrawState *ds) {
     ds->paused = !ds->paused;
   }
   if (IsKeyPressed(KEY_M)) {
-    if (!ds->menu_mode) {
-      ds->menu_mode = true;
+    if (ds->menu_mode == MENU_NONE) {
+      ds->menu_mode = MENU_MAIN;
     }
   }
   /* if (IsKeyPressed(KEY_J)) { */
@@ -467,7 +473,7 @@ int main(void) {
   while (!WindowShouldClose() && !quit) {
     handle_input(&ds);
     draw_game_state(&ds);
-    if (frame % (FPS / TPS) == 0 && (!ds.menu_mode || !ds.paused)) {
+    if (frame % (FPS / TPS) == 0 && (ds.menu_mode == MENU_NONE || !ds.paused)) {
       tick_game();
       turn++;
     }
