@@ -41,7 +41,8 @@ typedef enum ProductionMaterial {
   LONG_WIRES,
   SMALL_BOWL,
   BOWL_OF_SHORT_WIRES,
-  BOWL_OF_HEADLESS_PINS
+  BOWL_OF_HEADLESS_PINS,
+  PM_COUNT
 } ProductionMaterial;
 
 typedef struct Recipe {
