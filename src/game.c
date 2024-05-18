@@ -474,6 +474,11 @@ int index_of_material_in_stockpile(const Stockpile *s, ProductionMaterial p) {
 
 void add_required_material_to_stockpile(Stockpile *s, ProductionMaterial m,
                                         int amount) {
+  int i = index_of_material_in_stockpile(s, m);
+  if (i > -1) {
+    s->required_material_count[i] += amount;
+    return;
+  }
   s->required_material[s->c_required_material] = m;
   s->required_material_count[s->c_required_material] = amount;
   s->c_required_material++;
