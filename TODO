@@ -26,12 +26,6 @@ Improve stockpile puts:
 - block puts when stockpile is full
 - limit size of piles, and overspill to additional piles
 
-Attach stockpile to machine
-
-Add machine through menu
-
 Hire worker through menu
 
 Don't allow stockpiles / machines to be placed over top of eachother.
-
-Draw boxes around stockpiles in black to differentiate

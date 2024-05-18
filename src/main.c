@@ -24,7 +24,12 @@
 
 bool quit = false;
 
-typedef enum { MENU_NONE, MENU_MAIN, MENU_MACHINE_SELECT } MenuMode;
+typedef enum {
+  MENU_NONE,
+  MENU_MAIN,
+  MENU_MACHINE_SELECT,
+  MENU_ATTACH_MACHINE_STOCKPILE
+} MenuMode;
 
 struct DrawState {
   GameState *gs;
@@ -37,6 +42,7 @@ struct DrawState {
   enum ObjectType placement_of;
   int placement_of_sub;
   Vector2 placement_size;
+  int menu_modifier;
 } draw_state;
 
 Vector2 frame_to_row_col(int frame, int frames_per_row) {
@@ -168,6 +174,40 @@ void draw_game_state(struct DrawState *ds) {
                  font_size, 4, BLUE);
     }
 
+  } else if (ds->menu_mode == MENU_ATTACH_MACHINE_STOCKPILE) {
+
+    int y_offset = 1;
+
+    if (ds->menu_modifier == 'i') {
+      DrawTextEx(*font, "SELECT MACHINE TO ATTACH INPUT STOCKPILE (q to quit)",
+                 (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
+                           (y_offset++ * font_size)},
+                 font_size, 4, BLUE);
+    } else if (ds->menu_modifier == 'o') {
+      DrawTextEx(*font, "SELECT MACHINE TO ATTACH OUTPUT STOCKPILE (q to quit)",
+                 (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
+                           (y_offset++ * font_size)},
+                 font_size, 4, BLUE);
+    }
+    
+    Machine *m;
+    for (int i = 0; i < gs->c_machines; i++) {
+      m = get_machine_by_id(i);
+      if (ds->menu_modifier == 'i' && m->input_stockpile == -1) {
+        sprintf(text_buffer, "%d) %s", i, machine_str(i));
+        DrawTextEx(*font, text_buffer,
+                   (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
+                             (y_offset++ * font_size)},
+                   font_size, 4, BLUE);
+      }
+      if (ds->menu_modifier == 'o' && m->output_stockpile == -1) {
+        sprintf(text_buffer, "%d) %s", i, machine_str(i));
+        DrawTextEx(*font, text_buffer,
+                   (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
+                             (y_offset++ * font_size)},
+                   font_size, 4, BLUE);
+      }
+    }
   } else {
     ObjectReference o = object_under_point(gs->cursor.x, gs->cursor.y);
 
@@ -275,12 +315,12 @@ void draw_game_state(struct DrawState *ds) {
       y_offset++;
 
       if (s->attached_machine == -1) {
-        DrawTextEx(*font, "i) [NI] Add as input for machine",
+        DrawTextEx(*font, "i) Add as input for machine",
                    (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
                              (font_size * y_offset++)},
                    font_size, 4, BLUE);
 
-        DrawTextEx(*font, "o) [NI] Add as output for machine",
+        DrawTextEx(*font, "o) Add as output for machine",
                    (Vector2){SQUARE_SIZE * (MAX_X + 1) + font_size,
                              (font_size * y_offset++)},
                    font_size, 4, BLUE);
@@ -334,6 +374,7 @@ void draw_game_state(struct DrawState *ds) {
 
 void handle_input(struct DrawState *ds) {
   GameState *gs = ds->gs;
+  ObjectReference o = object_under_point(gs->cursor.x, gs->cursor.y);
 
   if (ds->menu_mode == MENU_MAIN) {
     if (IsKeyPressed(KEY_Q)) {
@@ -369,6 +410,31 @@ void handle_input(struct DrawState *ds) {
         Vector ps = machine_size(i);
         ds->placement_size.x = ps.x;
         ds->placement_size.y = ps.y;
+      }
+    }
+    return;
+  }
+
+  if (ds->menu_mode == MENU_ATTACH_MACHINE_STOCKPILE) {
+    int sid = o.id;
+    if (IsKeyPressed(KEY_Q)) {
+      ds->menu_mode = MENU_NONE;
+    }
+
+    for (int i = 0; i < 9; i++) {
+      // 48 is num key 0
+      if (IsKeyPressed(48 + i)) {
+        if (ds->menu_modifier == 'i') {
+          add_input_stockpile_to_machine(i, sid);
+          ds->menu_mode = MENU_NONE;
+        } else if (ds->menu_modifier == 'o') {
+          add_output_stockpile_to_machine(i, sid);
+          ds->menu_mode = MENU_NONE;
+        } else {
+          printf("ERROR: attach stockpile with invalid modifier %c",
+                 (char)ds->menu_modifier);
+          exit(1);
+        }
       }
     }
     return;
@@ -450,7 +516,7 @@ void handle_input(struct DrawState *ds) {
   /* if (IsKeyPressed(KEY_R)) { */
   /*   debug_print_ro_queue(); */
   /* } */
-  ObjectReference o = object_under_point(gs->cursor.x, gs->cursor.y);
+
   if (o.object_type == O_MACHINE) {
     if (IsKeyPressed(KEY_A)) {
       Machine *m = get_machine_by_id(o.id);
@@ -459,6 +525,21 @@ void handle_input(struct DrawState *ds) {
       // should be able to pick any possible recipe
       RecipeName r = *rs;
       assign_machine_production_job(o.id, r);
+    }
+  }
+
+  if (o.object_type == O_STOCKPILE) {
+    Stockpile *s = get_stockpile_by_id(o.id);
+
+    if (s->attached_machine == -1) {
+      if (IsKeyPressed(KEY_I)) {
+        ds->menu_mode = MENU_ATTACH_MACHINE_STOCKPILE;
+        ds->menu_modifier = 'i';
+      }
+      if (IsKeyPressed(KEY_O)) {
+        ds->menu_mode = MENU_ATTACH_MACHINE_STOCKPILE;
+        ds->menu_modifier = 'o';
+      }
     }
   }
 }
@@ -488,8 +569,6 @@ int main(void) {
   int in = add_stockpile(2, 2, 2, 2);
   Stockpile *s_in = get_stockpile_by_id(in);
   int out = add_stockpile(2, 6, 2, 2);
-  Stockpile *s_out = get_stockpile_by_id(out);
-  s_out->can_be_taken_from = true;
 
   add_required_material_to_stockpile(s_in, EMPTY_SPINDLE, 1);
   add_material_to_stockpile(s_in, WASHED_IRON_WIRE_COIL, 1);
@@ -501,8 +580,6 @@ int main(void) {
 
   // PULLER machine
   out = add_stockpile(11, 10, 3, 3);
-  s_out = get_stockpile_by_id(out);
-  s_out->can_be_taken_from = true;
 
   in = add_stockpile(7, 10, 2, 2);
   // add_material_to_stockpile(in, SPINDLED_WIRE_COIL, 5);
@@ -516,8 +593,6 @@ int main(void) {
   // CUTTER machine
   int cutter = add_machine(WIRE_CUTTER, 12, 3);
   out = add_stockpile(12, 5, 2, 2);
-  s_out = get_stockpile_by_id(out);
-  s_out->can_be_taken_from = true;
 
   in = add_stockpile(10, 3, 2, 2);
   s_in = get_stockpile_by_id(in);
@@ -527,11 +602,18 @@ int main(void) {
   add_output_stockpile_to_machine(cutter, out);
   add_input_stockpile_to_machine(cutter, in);
 
+  // GRINDER machine
+  int grinder = add_machine(WIRE_GRINDER, 7, 5);
+  out = add_stockpile(7, 6, 2, 1);
+
+  in = add_stockpile(6, 4, 2, 1);
+  s_in = get_stockpile_by_id(in);
+
+  // add workers
   add_worker();
   add_worker();
   add_worker();
   assign_machine_production_job(winder, WIND_WIRE);
-  // assign_machine_production_job(puller, PULL_WIRE);
 
   InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "THE_GOAL");
   Font font = LoadFont("assets/romulus.png");

@@ -693,6 +693,7 @@ int add_machine(enum MachineType type, int x, int y) {
       .worker = -1,
       .location = (Vector){x, y},
       .size = v,
+      .input_stockpile = -1,
       .output_stockpile = -1,
   };
 
@@ -709,6 +710,7 @@ void add_output_stockpile_to_machine(int mid, int sid) {
 
   Stockpile *s = get_stockpile_by_id(sid);
   s->io = OUTPUT;
+  s->can_be_taken_from = true;
   s->attached_machine = mid;
 }
 
@@ -718,6 +720,7 @@ void add_input_stockpile_to_machine(int mid, int sid) {
 
   Stockpile *s = get_stockpile_by_id(sid);
   s->io = INPUT;
+  s->can_be_taken_from = false;
   s->attached_machine = mid;
 }
 
