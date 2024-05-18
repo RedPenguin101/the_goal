@@ -80,21 +80,33 @@ void draw_game_state(struct DrawState *ds) {
 
   // Draw stockpiles
   for (int i = 0; i < gs->c_stockpile; i++) {
-    Stockpile w = gs->stockpiles[i];
-    int start_x = w.location.x;
-    int start_y = w.location.y;
+    Stockpile s = gs->stockpiles[i];
+    int x = s.location.x;
+    int y = s.location.y;
+    int w = s.size.x;
+    int h = s.size.y;
 
-    for (int i = 0; i < w.size.x; i++) {
-      for (int j = 0; j < w.size.y; j++) {
-        draw_frame_in_square(FRAME_STOCKPILE, start_x + i, start_y + j, tex);
+    for (int i = 0; i < w; i++) {
+      for (int j = 0; j < h; j++) {
+        draw_frame_in_square(FRAME_STOCKPILE, x + i, y + j, tex);
       }
     }
 
-    for (int j = 0; j < w.c_contents; j++) {
+    DrawLine(SQUARE_SIZE * x, SQUARE_SIZE * y, SQUARE_SIZE * (x + w),
+             SQUARE_SIZE * y, WHITE);
 
-      if (w.contents_count[j] > 0) {
+    DrawLine(SQUARE_SIZE * x, SQUARE_SIZE * (y + h), SQUARE_SIZE * (x + w),
+             SQUARE_SIZE * (y + h), WHITE);
 
-        draw_frame_in_square(FRAME_MATERIAL, (start_x + j), (start_y), tex);
+    DrawLine(SQUARE_SIZE * x, SQUARE_SIZE * y, SQUARE_SIZE * x,
+             SQUARE_SIZE * (y + h), WHITE);
+
+    DrawLine(SQUARE_SIZE * (x + w), SQUARE_SIZE * y, SQUARE_SIZE * (x + w),
+             SQUARE_SIZE * (y + h), WHITE);
+
+    for (int j = 0; j < s.c_contents; j++) {
+      if (s.contents_count[j] > 0) {
+        draw_frame_in_square(FRAME_MATERIAL, (x + j), y, tex);
       }
     }
   }

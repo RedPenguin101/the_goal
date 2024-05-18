@@ -33,3 +33,5 @@ Add machine through menu
 Hire worker through menu
 
 Don't allow stockpiles / machines to be placed over top of eachother.
+
+Draw boxes around stockpiles in black to differentiate
